@@ -1,0 +1,1916 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NUDPACK Admin</title>
+
+  <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+  <script src="https://unpkg.com/html5-qrcode"></script>
+
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai+Looped:wght@100..900&display=swap"
+    rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
+
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: { primary: "#f95f06" },
+          fontFamily: { display: ["Noto Sans Thai Looped", "sans-serif"] }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    .scan-zone {
+      border: 2px dashed #e9d8ce
+    }
+
+    .latest {
+      background: #fff6e5
+    }
+
+    .modeBtn {
+  padding: 6px 0;
+  border-radius: 10px;
+  color: #64748b;
+  transition: all .15s ease;
+}
+
+input[name="confirmMode"]:checked + .modeBtn {
+  background: white;
+  color: #f97316;
+  box-shadow: 0 2px 6px rgba(0,0,0,.08);
+}
+
+    .activeMode {
+      background: #f95f06;
+      color: white;
+      box-shadow: 0 4px 10px rgba(249, 95, 6, .3);
+    }
+
+    input[type="radio"] {
+      display: none !important;
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body class="bg-[#fafafa] font-display" onload="loadWaitingParcels()">
+
+  <header class="sticky top-0 bg-white/80 backdrop-blur border-b p-4">
+    <div class="max-w-xl mx-auto flex justify-between items-center">
+      <div class="flex gap-3 items-center">
+        <img src="/static/NUDPACK_LOGO2.png" class="w-14" />
+        <div>
+  <h2 class="font-bold">NUDPACK ADMIN</h2>
+  <p class="text-xs text-orange-400"></p>
+
+  <!-- admin name -->
+  <div class="mt-2 inline-flex items-center rounded-xl bg-white/80 backdrop-blur
+shadow px-2 py-1 text-[10px]">
+
+    <span class="material-symbols-outlined text-[12px] text-gray-400 mr-1">badge</span>
+
+    <span id="adminName" class="font-medium text-gray-700"></span>
+
+</div>
+</div>
+      </div>
+
+      <button onclick="logout()" class="flex items-center gap-1 px-3 py-1.5 rounded-lg
+bg-red-50 text-red-600 text-xs font-semibold
+hover:bg-red-100 active:scale-95 transition">
+
+                    <span class="material-symbols-outlined text-sm">
+                        logout
+                    </span>
+                </button>
+    </div>
+  </header>
+
+  <main id="adminPage" class="max-w-xl mx-auto">
+    
+    <!-- ================= Scan ================= -->
+    <section class="p-4 relative mt-10">
+      <div class="absolute right-6 -top-8 flex items-center gap-2">
+  
+  <span class="text-sm font-medium text-gray-700">
+    รายงาน
+  </span>
+
+  <button
+    onclick="openReportPage()"
+    class="size-10 rounded-full
+           bg-orange-500 text-white shadow-lg
+           flex items-center justify-center
+           hover:bg-orange-600 active:scale-95 transition"
+  >
+    <span class="material-symbols-outlined text-[20px]">
+      analytics
+    </span>
+  </button>
+
+</div>
+      <div class="bg-white rounded-xl p-4 scan-zone">
+        
+
+        <label class="text-sm text-primary font-semibold">กรอกเลขพัสดุ</label>
+
+        <div class="flex mt-2">
+          <input id="scanInput" class="flex-1 border rounded-l-lg h-12 px-3" />
+
+          <button onclick="handleScan(scanInput.value.trim())" class="bg-orange-500 text-white px-4 rounded-r-lg">
+            <span class="material-symbols-outlined">barcode_scanner</span>
+          </button>
+        </div>
+
+        <div class="flex gap-3 mt-4">
+          <button onclick="startCamera()"
+            class="flex-1 bg-orange-500 text-white rounded-lg h-12 flex justify-center items-center gap-2">
+            <span class="material-symbols-outlined">photo_camera</span>เปิดกล้อง
+          </button>
+          <button onclick="stopCamera()"
+                        class="flex-1 border rounded-lg h-12 flex justify-center items-center gap-2">
+                        <span class="material-symbols-outlined">videocam_off</span>ปิดกล้อง
+                    </button>
+        </div>
+
+        <div id="cameraOverlay" class="fixed inset-0 bg-black/70 hidden z-50 flex items-center justify-center">
+
+          <div class="bg-white rounded-2xl p-4 w-80 shadow-xl">
+            <div class="text-sm font-semibold mb-2 text-center text-gray-700">
+      สแกน QR code
+    </div>
+            <div id="reader"></div>
+
+            <button onclick="stopCamera()" class="mt-4 w-full bg-orange-500 text-white py-2 rounded-xl">
+              ปิดกล้อง
+            </button>
+
+          </div>
+
+        </div>
+        <div id="scanStatus" class="text-sm mt-2"></div>
+
+      </div>
+    </section>
+<section class="px-4 mt-2">
+  
+
+    <!-- queue search -->
+    <input
+      id="queueSearch"
+      placeholder="ค้นหาเลขคิว"
+      class="border px-4 py-2 rounded-xl text-sm w-40 shadow-sm
+             focus:ring-2 focus:ring-orange-400 focus:outline-none"
+    >
+
+    <!-- search date -->
+    
+
+
+  </div>
+</section>
+<section class="px-4 mt-2">
+  <div class="mb-3 flex gap-2 items-center">
+
+    <!-- date -->
+    <input
+  id="dateFilter"
+  type="text"
+  placeholder="เลือกวันที่"
+  onfocus="this.type='date'"
+  onblur="if(!this.value)this.type='text'"
+  class="border px-2 py-2 rounded-lg text-xs shadow-sm w-28
+         focus:ring-2 focus:ring-orange-400 focus:outline-none"
+/>
+             
+    <!-- today -->
+    <button
+      onclick="clearDateFilter()"
+      class="border px-4 py-2 rounded-xl text-sm hover:bg-gray-50"
+    >
+      วันนี้
+    </button>
+
+    <!-- all -->
+    <button
+      onclick="loadWaitingParcels()"
+      class="border px-4 py-2 rounded-xl text-sm hover:bg-gray-50"
+    >
+      ทุกวัน
+    </button>
+    <button
+      onclick="applyDateFilter()"
+      class="bg-orange-500 hover:bg-orange-600 transition text-white px-4 py-2 rounded-xl text-sm shadow"
+    >
+      ค้นหา
+    </button>
+  </div>
+</section>
+    
+    
+
+    <!-- ================= Parcel List ================= -->
+    <section class="px-4 mt-3">
+  <div class="flex items-center justify-between mb-2">
+
+    <h3 class="font-semibold">รายการพัสดุ</h3>
+
+    <!-- status filter (small right side) -->
+    <select
+      id="statusFilter"
+      onchange="loadWaitingParcels()"
+      class="appearance-none rounded-lg border border-gray-300 bg-white
+             px-3 py-1.5 text-xs w-36
+             shadow-sm transition
+             hover:border-orange-300
+             focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-orange-400"
+    >
+      <option value="ทั้งหมด" selected>ทั้งหมด</option>
+      <option value="ยังไม่ได้รับ">ยังไม่ได้รับ</option>
+      <option value="ได้รับแล้ว">ได้รับแล้ว</option>
+      <option value="กำลังรอ">กำลังรอ</option>
+    </select>
+
+  </div>
+
+  <div id="parcelList" class="flex flex-col gap-2"></div>
+</section>
+
+</div>
+  <!-- popup -->
+  <div id="queuePopup" class="fixed inset-0 hidden bg-black/40 items-center justify-center">
+    <div class="bg-white rounded-xl p-6 w-72 text-center">
+      <p class="text-gray-400 text-sm">Queue</p>
+      <div id="popupQueue" class="text-6xl text-primary font-bold"></div>
+      <p id="popupTracking" class="text-xs text-gray-500 mt-2"></p>
+      <button onclick="closePopup()" class="mt-4 w-full bg-primary text-white rounded-lg py-2">ตกลง</button>
+    </div>
+  </div>
+
+  <!-- Pending Verify Popup -->
+  <div id="pendingPopup"
+    class="fixed inset-0 hidden bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 px-3">
+
+    <div
+        class="bg-white rounded-2xl w-full max-w-md relative shadow-xl animate-in fade-in zoom-in duration-150">
+
+
+        <!-- Header -->
+        <div class="px-5 pt-5 pb-3 border-b">
+            <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-orange-400">pending_actions</span>
+                <h3 class="font-semibold text-gray-800">รอการยืนยันพัสดุ</h3>
+            </div>
+
+            <p class="text-xs text-gray-400 mt-1">
+                กรุณาตรวจสอบข้อมูลก่อนยืนยัน
+            </p>
+        </div>
+
+        <!-- Content -->
+        <div class="p-5 space-y-3">
+            <div id="verifyBox"></div>
+            <div id="readerConfirm"></div>
+        </div>
+
+    </div>
+</div>
+
+  <!-- Already Picked Popup -->
+<div id="alreadyPopup"
+  class="fixed inset-0 hidden bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 px-4">
+
+  <div class="bg-white rounded-3xl w-full max-w-sm shadow-2xl animate-in fade-in zoom-in duration-150">
+
+    <!-- Top Status -->
+    <div class="pt-6 pb-4 px-5 text-center">
+
+      <div class="mx-auto mb-3 w-12 h-12 rounded-full bg-red-50 flex items-center justify-center">
+        <span class="material-symbols-outlined text-red-400 text-2xl">
+          inventory_2
+        </span>
+      </div>
+
+      <h3 class="text-base font-semibold text-gray-800">
+        พัสดุนี้ถูกรับไปแล้ว
+      </h3>
+
+
+    </div>
+
+    <!-- Card -->
+    <div id="alreadyBox" class="px-5"></div>
+
+    <!-- Action -->
+    <div class="p-5">
+      <button onclick="closeAlreadyPopup()"
+        class="w-full rounded-xl bg-orange-400 py-3 text-white text-sm font-medium active:scale-95 transition">
+        ตกลง
+      </button>
+    </div>
+
+  </div>
+</div>
+
+  <!-- Recipient Required Popup -->
+<div id="recipientPopup"
+  class="fixed inset-0 hidden bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 px-4">
+
+  <div class="bg-white rounded-3xl w-full max-w-xs shadow-2xl animate-in fade-in zoom-in duration-150">
+
+    <!-- Icon -->
+    <div class="pt-6 text-center">
+      <div class="mx-auto w-12 h-12 rounded-full bg-orange-50 flex items-center justify-center">
+        <span class="material-symbols-outlined text-orange-400 text-2xl">
+          person_alert
+        </span>
+      </div>
+    </div>
+
+    <!-- Content -->
+    <div class="px-5 pt-3 pb-4 text-center">
+      <h3 class="text-base font-semibold text-gray-800">
+        ต้องกรอกชื่อผู้รับ
+      </h3>
+
+      <p class="mt-1 text-xs text-gray-400">
+        กรุณากรอกชื่อผู้รับก่อนสแกนยืนยัน
+      </p>
+    </div>
+
+    <!-- Action -->
+    <div class="px-5 pb-5">
+      <button onclick="closeRecipientPopup()"
+        class="w-full rounded-xl bg-orange-400 py-2.5 text-white text-sm font-medium active:scale-95 transition">
+        ตกลง
+      </button>
+    </div>
+
+  </div>
+</div>
+  <!-- Mismatch Popup -->
+<div id="mismatchPopup"
+  class="fixed inset-0 hidden bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 px-4">
+
+  <div class="bg-white rounded-3xl w-full max-w-xs shadow-2xl animate-in fade-in zoom-in duration-150">
+
+    <!-- Icon -->
+    <div class="pt-6 text-center">
+      <div class="mx-auto w-12 h-12 rounded-full bg-red-50 flex items-center justify-center">
+        <span class="material-symbols-outlined text-red-400 text-2xl">
+          error
+        </span>
+      </div>
+    </div>
+
+    <!-- Content -->
+    <div class="px-5 pt-3 pb-4 text-center">
+      <h3 class="text-base font-semibold text-gray-800">
+        เลขพัสดุไม่ตรง
+      </h3>
+
+      <p class="mt-1 text-xs text-gray-400">
+        กรุณาตรวจสอบเลขพัสดุอีกครั้ง
+      </p>
+    </div>
+
+    <!-- Action -->
+    <div class="px-5 pb-5">
+      <button onclick="closeMismatchPopup()"
+        class="w-full rounded-xl bg-orange-400 py-2.5 text-white text-sm font-medium active:scale-95 transition">
+        ตกลง
+      </button>
+    </div>
+
+  </div>
+</div>
+  <!-- Confirm Camera Overlay -->
+  <div id="confirmCameraOverlay" class="fixed inset-0 bg-black/70 hidden z-50 flex items-center justify-center">
+
+    <div class="bg-white rounded-2xl p-4 w-80 shadow-xl">
+
+      <div id="confirmReader"></div>
+
+      <button onclick="stopConfirmCamera()" class="mt-4 w-full bg-orange-400 text-white py-2 rounded-xl">
+        ปิดกล้อง
+      </button>
+
+    </div>
+
+  </div>
+  <!-- Not Found Popup -->
+<div id="notFoundPopup"
+  class="fixed inset-0 hidden bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 px-4">
+
+  <div class="bg-white rounded-3xl w-full max-w-xs shadow-2xl animate-in fade-in zoom-in duration-150">
+
+    <!-- Icon -->
+    <div class="pt-6 text-center">
+      <div class="mx-auto w-12 h-12 rounded-full bg-red-50 flex items-center justify-center">
+        <span class="material-symbols-outlined text-red-400 text-2xl">
+          search_off
+        </span>
+      </div>
+    </div>
+
+    <!-- Content -->
+    <div class="px-5 pt-3 pb-4 text-center">
+      <h3 class="text-base font-semibold text-gray-800">
+        ไม่พบพัสดุ
+      </h3>
+
+      <p class="mt-1 text-xs text-gray-400">
+        ไม่พบเลขพัสดุนี้ในระบบ
+      </p>
+    </div>
+
+    <!-- Action -->
+    <div class="px-5 pb-5">
+      <button onclick="closeNotFoundPopup()"
+        class="w-full rounded-xl bg-orange-400 py-2.5 text-white text-sm font-medium active:scale-95 transition">
+        ตกลง
+      </button>
+    </div>
+
+  </div>
+</div>
+
+  <!-- Success Popup -->
+<div id="successPopup"
+  class="fixed inset-0 hidden bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 px-4">
+
+  <div class="bg-white rounded-3xl w-full max-w-xs shadow-2xl animate-in fade-in zoom-in duration-150">
+
+    <!-- Icon -->
+    <div class="pt-7 text-center">
+      <div
+        class="mx-auto w-14 h-14 rounded-full bg-orange-50 flex items-center justify-center shadow-inner">
+        <span class="material-symbols-outlined text-orange-400 text-3xl">
+          check_circle
+        </span>
+      </div>
+    </div>
+
+    <!-- Content -->
+    <div class="px-5 pt-3 pb-2 text-center">
+      <h3 class="text-base font-semibold text-gray-800">
+        รับพัสดุเรียบร้อยแล้ว
+      </h3>
+
+      <div id="successInfo"
+        class="mt-1 text-xs text-gray-400"></div>
+    </div>
+
+    <!-- Action -->
+    <div class="px-5 pb-6 pt-3">
+      <button onclick="closeSuccessPopup()"
+        class="w-full rounded-xl bg-orange-400 py-2.5 text-white text-sm font-medium active:scale-95 transition">
+        ตกลง
+      </button>
+    </div>
+
+  </div>
+</div>
+
+
+
+  </main>
+  <div id="reportPage"
+ class="fixed inset-0 bg-[#fafafa] hidden overflow-y-auto z-50">
+
+<header class="sticky top-0 bg-white border-b p-4 z-30">
+  <div class="max-w-xl mx-auto relative flex items-center">
+
+    <!-- Back button -->
+    <button onclick="closeReportPage()"
+      class="size-9 rounded-full bg-slate-100
+             flex items-center justify-center
+             hover:bg-slate-200 transition">
+      <span class="material-symbols-outlined text-slate-700">
+        arrow_back
+      </span>
+    </button>
+
+    <!-- Title (centered) -->
+    <h1 class="absolute left-1/2 -translate-x-1/2
+               text-base font-semibold text-slate-800">
+      รายงานพัสดุ
+    </h1>
+
+  </div>
+</header>
+<div class="max-w-xl mx-auto p-4">
+
+<!-- Report Controls -->
+<div class="flex gap-2 mb-3">
+
+
+  <div class="flex gap-2 items-center">
+
+  <!-- start -->
+  <input
+  id="r_start"
+  type="text"
+  placeholder="เริ่ม"
+  onfocus="this.type='date'"
+  onblur="formatSlash(this)"
+  class="border px-2 py-2 rounded-lg text-xs shadow-sm w-28
+         focus:ring-2 focus:ring-orange-400 focus:outline-none"
+/>
+<p class=" px-3 py-1 text-xs">ถึง</p>
+
+<input
+  id="r_end"
+  type="text"
+  placeholder="สิ้นสุด"
+  onfocus="this.type='date'"
+  onblur="formatSlash(this)"
+  class="border px-2 py-2 rounded-lg text-xs shadow-sm w-28
+         focus:ring-2 focus:ring-orange-400 focus:outline-none"
+/>
+
+  <button onclick="loadReport()"
+    class="bg-orange-500 text-white text-xs px-3 py-2 rounded-lg shadow
+           active:scale-95">
+    โหลด
+  </button>
+
+</div>
+
+</div>
+
+<div id="summary" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6"></div>
+
+<canvas id="summaryChart" height="160"></canvas>
+
+<div class="flex gap-2 my-3">
+<button onclick="toggleReportEdit()"
+ class="bg-orange-500 text-white text-xs px-3 py-2 rounded-lg shadow
+           active:scale-95">
+แก้ไข
+</button>
+
+<button id="removeBtn"
+  onclick="openConfirmModal()"
+  class="bg-red-500 text-white text-xs px-3 py-2 rounded-lg shadow
+           active:scale-95"
+  hidden
+  disabled>
+  ลบรายการที่เลือก
+</button>
+</div>
+
+<div id="reportTable"></div>
+
+
+<!-- Floating Export FAB -->
+<div class="fixed bottom-5 right-5 z-40">
+
+  <div class="relative">
+
+    <!-- FAB Button -->
+    <button onclick="toggleExportMenu()"
+      class="flex items-center gap-2
+             bg-orange-500 hover:bg-orange-600
+             text-white px-4 py-3 rounded-full
+             shadow-xl active:scale-95 transition">
+      📤
+      <span class="text-sm font-medium">Export</span>
+    </button>
+
+    <!-- Dropdown -->
+    <div id="exportMenu"
+      class="absolute right-0 bottom-14 w-40
+             bg-white rounded-2xl shadow-xl
+             border border-slate-100
+             p-2 hidden">
+
+      <button onclick="exportReport('csv')"
+        class="flex items-center gap-2 w-full
+               px-3 py-2 text-sm rounded-xl
+               hover:bg-slate-100 transition">
+        📄 CSV
+      </button>
+
+      <button onclick="exportReport('xlsx')"
+        class="flex items-center gap-2 w-full
+               px-3 py-2 text-sm rounded-xl
+               hover:bg-slate-100 transition">
+        📊 Excel
+      </button>
+
+    </div>
+
+  </div>
+</div>
+<!-- Confirm Delete Modal -->
+<div id="confirmModal"
+     class="fixed inset-0 z-50 hidden items-center justify-center">
+
+  <!-- backdrop -->
+  <div class="absolute inset-0 bg-black/40 backdrop-blur-sm"
+       onclick="closeConfirmModal()"></div>
+
+  <!-- modal -->
+  <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
+    <div class="flex items-center gap-3">
+      <div class="size-10 rounded-full bg-red-100 text-red-600
+                  flex items-center justify-center font-bold">
+        !
+      </div>
+      <h3 class="font-semibold text-slate-800 text-lg">
+        ยืนยันการลบ
+      </h3>
+    </div>
+
+    <p id="confirmText"
+       class="mt-3 text-sm text-slate-600 leading-relaxed">
+      คุณต้องการลบรายการที่เลือกหรือไม่
+    </p>
+
+    <div class="mt-6 flex justify-end gap-3">
+      <button onclick="closeConfirmModal()"
+              class="px-4 py-2 rounded-lg text-sm
+                     bg-slate-100 hover:bg-slate-200
+                     text-slate-700">
+        ยกเลิก
+      </button>
+
+      <button onclick="confirmDelete()"
+              class="px-4 py-2 rounded-lg text-sm
+                     bg-red-500 hover:bg-red-600
+                     text-white font-medium">
+        ลบรายการ
+      </button>
+    </div>
+  </div>
+</div>
+  <script>
+  let chartInst = null;
+  let currentReportData = [];
+  let reportEditMode = false;
+  let selectedToDelete = new Set();
+    
+    /* ---------------- Tabs ---------------- */
+    document.querySelectorAll('.tabBtn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tabBtn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const tab = btn.dataset.tab;
+        document.querySelectorAll('.tabContent').forEach(tc => tc.style.display = tc.id === tab ? 'block' : 'none');
+        if (tab === 'reports') initReports();
+      });
+    });
+
+    /* ---------- Globals ---------- */
+    let pendingVerification = null;
+
+    // scanners (ต้องอยู่บนสุดก่อน function ใด ๆ)
+    let mainScanner = null;
+    let confirmScanner = null;
+    let cameraLocked = false;
+    let confirmStopping = false
+let confirming = false
+
+async function confirmPickup(tracking) {
+  if (confirming) return
+  confirming = true
+
+  try {
+    await fetch(`/api/parcels/${encodeURIComponent(tracking)}/pickup`, {
+  method: "POST",
+  credentials: "include",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    recipient_name: recipientToSend
+  })
+})
+  } finally {
+    confirming = false
+  }
+}
+
+    /* ---------- Scan input handling ---------- */
+    const scanInputEl = document.getElementById('scanInput');
+    scanInputEl.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') handleScan(scanInputEl.value.trim());
+    });
+
+    async function handleScan(value) {
+      if (!value) return;
+      // first scan -> verify
+      if (!pendingVerification) {
+        setStatus('');
+        try {
+          const res = await fetch(`/api/parcels/${encodeURIComponent(value)}/verify`, {credentials: "include",method: 'POST' });
+          if (!res.ok) {
+
+            // ===== ไม่พบพัสดุ =====
+            if (res.status === 404) {
+              openNotFoundPopup()
+              ("")
+              scanInputEl.value = ''
+              return
+            }
+
+            const err = await safeJson(res).catch(() => ({ detail: res.statusText }));
+            setStatus('');
+            scanInputEl.value = '';
+            return;
+          }
+          const info = await res.json();
+          // ถ้าได้รับแล้ว → popup แจ้ง
+          if (info.status === "PICKED_UP" || info.status === "ได้รับแล้ว") {
+
+  // ==================================
+  // กรณี: รับแล้ว แต่ยังไม่มี admin
+  // ==================================
+  if (!info.admin_staff_name) {
+
+    // 🔥 ยันทันที
+    fetch(`/api/parcels/${encodeURIComponent(info.tracking)}/confirm_pickup`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        recipient_name: info.recipient_name || info.recipient || "",
+        scanner_id: "admin_ui"
+      })
+    })
+
+    // ✅ แจ้งผล
+    document.getElementById("alreadyBox").innerHTML = `
+  <div class="rounded-3xl bg-gradient-to-b from-emerald-50 to-white p-5 text-center shadow-md space-y-3">
+
+    <div class="mx-auto w-14 h-14 rounded-full bg-white shadow flex items-center justify-center">
+      <span class="material-symbols-outlined text-emerald-500 text-[28px]">
+        verified
+      </span>
+    </div>
+
+    <div class="text-sm font-semibold text-gray-800 tracking-tight">
+      ยืนยันเรียบร้อย
+    </div>
+
+    <div class="text-xs text-gray-500">
+      เจ้าหน้าที่ได้ยืนยันการรับพัสดุแล้ว
+    </div>
+
+  </div>
+`
+
+    openAlreadyPopup()
+    scanInputEl.value = ""
+    return
+  }
+
+  // ==================================
+  // กรณี: รับแล้ว และมี admin แล้ว
+  // ==================================
+  document.getElementById("alreadyBox").innerHTML = `
+    <div class="rounded-2xl bg-slate-50 p-4 space-y-3 text-xs">
+
+      <div>
+        <div class="text-gray-400">Tracking</div>
+        <div class="text-sm font-medium">${escapeHtml(info.tracking)}</div>
+      </div>
+
+      <div>
+        <div class="text-gray-400">ผู้รับ</div>
+        <div class="text-sm font-medium">${escapeHtml(info.recipient_name || info.recipient || "-")}</div>
+      </div>
+
+      <div class="text-right">
+        <div class="text-gray-400">เจ้าหน้าที่</div>
+        <div class="text-sm font-medium">${escapeHtml(info.admin_staff_name)}</div>
+      </div>
+
+      <div class="flex justify-between items-center pt-2 border-t">
+        <div>
+          <div class="text-gray-400">เลขคิว</div>
+          <div class="font-medium">
+            ${escapeHtml(info.queue_number || info.queue || "-")}
+          </div>
+        </div>
+
+        <div class="text-right">
+          <div class="text-gray-400">เวลาได้รับ</div>
+          <div class="text-[11px]">
+            ${escapeHtml(
+              info.picked_up_at
+                ? new Date(info.picked_up_at).toLocaleString("th-TH", { timeZone: "Asia/Bangkok" })
+                : "-"
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  `
+
+  openAlreadyPopup()
+  scanInputEl.value = ""
+  return
+}
+function confirmAdminPickup(tracking, recipientName) {
+  fetch(`/api/parcels/${encodeURIComponent(tracking)}/confirm_pickup`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      recipient_name: recipientName,
+      scanner_id: "admin_ui"
+    })
+  })
+  .then(res => res.json())
+  .then(() => {
+    closeAlreadyPopup()
+  })
+}
+
+          const recipientName = info.recipient_name ?? info.recipient ?? '';
+          pendingVerification = {
+            tracking: info.tracking,
+            queue: info.queue_number || info.queue || '',
+            recipient: recipientName,
+            ts: Date.now()
+          };
+          renderPendingBox();
+          openPendingPopup();
+          showDetail(info);
+
+          setStatus('');
+        } catch (err) {
+          setStatus('');
+        } finally {
+          scanInputEl.value = '';
+        }
+        return;
+      }
+
+      // second scan -> if matches, perform confirm using recipient in pending box
+      if (value === pendingVerification.tracking) {
+        const recipientInput = document.getElementById('pendingRecipientInput');
+        const recipientToSend = recipientInput ? recipientInput.value.trim() : (pendingVerification.recipient || '');
+        await doConfirmPickup(pendingVerification.tracking, recipientToSend);
+        return;
+      } else {
+        openMismatchPopup()
+      }
+    }
+
+    /* ---------- Render pending verification box ---------- */
+    function renderPendingBox() {
+      if (!pendingVerification) {
+        document.getElementById('verifyBox').innerHTML = '';
+        return;
+      }
+      const rec = pendingVerification.recipient || '';
+      document.getElementById('verifyBox').innerHTML = `
+
+  <!-- Parcel Info -->
+<div class="rounded-xl border bg-slate-50 p-3 text-xs space-y-1">
+  <div>
+    <span class="text-gray-400">Tracking</span><br>
+    <span class="font-medium">${escapeHtml(pendingVerification.tracking)}</span>
+  </div>
+
+  <div>
+    <span class="text-gray-400">เลขคิว</span><br>
+    <span class="font-medium">${escapeHtml(pendingVerification.queue)}</span>
+  </div>
+</div>
+
+<!-- Recipient -->
+<div class="mt-3">
+  <label class="text-xs text-gray-500">ชื่อผู้รับ</label>
+  <input id="pendingRecipientInput"
+    class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200"
+    value="${escapeAttr(rec)}"
+    placeholder="กรอกชื่อผู้รับตามบัตรนิสิต" />
+</div>
+
+<!-- Confirm Mode -->
+<div class="mt-4 bg-slate-100 p-1 flex text-xs">
+
+  <label class="flex-1">
+    <input type="radio" name="confirmMode" value="scan" hidden>
+    <div class="modeBtn flex items-center justify-center gap-1">
+      <span class="material-symbols-outlined text-[14px]">qr_code_scanner</span>
+      สแกน
+    </div>
+  </label>
+
+  <label class="flex-1">
+    <input type="radio" name="confirmMode" value="manual" hidden>
+    <div class="modeBtn flex items-center justify-center gap-1">
+      <span class="material-symbols-outlined text-[14px]">keyboard</span>
+      กรอกเอง
+    </div>
+  </label>
+
+</div>
+
+<!-- Manual Box -->
+<div id="manualConfirmBox" class="mt-3 hidden">
+  <label class="text-xs text-gray-500">พิมพ์ Tracking ซ้ำ</label>
+  <input id="pendingConfirmTracking"
+    class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200"
+    placeholder="Tracking เดิมอีกครั้ง" />
+</div>
+
+<!-- Hint -->
+<div class="mt-3 rounded-lg bg-orange-50 p-2 text-[11px] text-orange-500">
+  • สแกน Tracking เดิมซ้ำอีกครั้ง<br>
+  • หรือพิมพ์ Tracking ลงช่องด้านบน
+</div>
+
+<!-- Action -->
+<div class="mt-4 flex gap-2">
+
+<button id="pendingConfirmBtn"
+  class="flex-1 rounded-lg bg-orange-400 py-2 text-white text-sm font-medium disabled:opacity-40"
+  disabled>
+  ยืนยันรับพัสดุ
+</button>
+
+<button onclick="forceClearPending()"
+  class="flex-1 rounded-lg border py-2 text-sm text-gray-500">
+  ยกเลิก
+</button>
+
+</div>
+`;
+
+
+      const confirmField = document.getElementById('pendingConfirmTracking');
+      const recipientField = document.getElementById('pendingRecipientInput');
+      const confirmBtn = document.getElementById('pendingConfirmBtn');
+
+      function updatePendingControls() {
+        const a = (recipientField.value || '').trim().length > 0;
+        const b = (confirmField.value || '').trim().length > 0 && (confirmField.value.trim() === pendingVerification.tracking);
+        confirmBtn.disabled = !(a && b);
+      }
+
+      confirmField.addEventListener('input', updatePendingControls);
+      recipientField.addEventListener('input', updatePendingControls);
+
+      confirmBtn.addEventListener('click', async () => {
+        const recipientToSend = (document.getElementById('pendingRecipientInput').value || '').trim();
+        await doConfirmPickup(pendingVerification.tracking, recipientToSend);
+      });
+
+      let currentMode = null
+
+      document.querySelectorAll(".modeBtn").forEach(btn => {
+
+        btn.onclick = () => {
+
+          const mode = btn.innerText.includes("กรอก") ? "manual" : "scan"
+
+          // ===== กดซ้ำ = ปิด =====
+          if (currentMode === mode) {
+
+            btn.classList.remove("activeMode")
+            currentMode = null
+
+            document.getElementById("manualConfirmBox").style.display = "none"
+
+            stopConfirmCamera()
+
+            return
+          }
+
+          // ===== เลือกใหม่ =====
+          document.querySelectorAll(".modeBtn")
+            .forEach(b => b.classList.remove("activeMode"))
+
+          btn.classList.add("activeMode")
+          currentMode = mode
+
+          if (mode === "manual") {
+            document.getElementById("manualConfirmBox").style.display = "block"
+            stopConfirmCamera()
+            document.getElementById("pendingConfirmTracking")?.focus()
+          }
+
+          if (mode === "scan") {
+            document.getElementById("manualConfirmBox").style.display = "none"
+            startCameraConfirm()
+          }
+        }
+      })
+    }
+
+    /* ---------- Confirm pickup (send recipient_name with request) ---------- */
+    async function doConfirmPickup(tracking, recipientToSend) {
+      setStatus('');
+      try {
+        const res = await fetch(`/api/parcels/${encodeURIComponent(tracking)}/confirm_pickup`, {credentials: "include",
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json'},
+          body: JSON.stringify({ recipient_name: recipientToSend, scanner_id: 'admin_ui' })
+        });
+        const j = await safeJson(res);
+        if (res.ok && (j.ok === true || j.ok === undefined)) {
+
+showSuccessPopup(
+  tracking,
+  pendingVerification ? pendingVerification.queue : "",
+  recipientToSend
+)
+
+setStatus("")
+
+pendingVerification = null
+closePendingPopup()
+document.getElementById('verifyBox').innerHTML = ''
+
+refreshRecentIfExists()
+
+} else {
+          setStatus('');
+        }
+      } catch (err) {
+        setStatus('');
+      } finally {
+        try { document.getElementById('scanInput').value = ''; } catch (e) { }
+      }
+    }
+
+    /* Force clear pending */
+    function forceClearPending() {
+      pendingVerification = null;
+      document.getElementById('verifyBox').innerHTML = '';
+      closePendingPopup();
+      setStatus('');
+    }
+
+    /* ---------- Search ---------- */
+    document.getElementById('searchInput').addEventListener('keypress', (e) => { if (e.key === 'Enter') doSearch(); });
+    async function doSearch() {
+      const q = document.getElementById('searchInput').value.trim();
+      if (!q) return alert('Please input tracking or queue');
+      const res = await fetch(`/api/parcels/search?q=${encodeURIComponent(q)}`);
+
+      if (!res.ok) return alert('Search failed');
+      const data = await res.json();
+      if (data.count === 0) { document.getElementById('searchResults').innerHTML = '<div class="muted">No results</div>'; return; }
+      const rows = data.items.map(i => `<tr>
+    <td>${escapeHtml(i.tracking)}</td>
+    <td>${escapeHtml(i.queue)}</td>
+    <td>${escapeHtml(i.status)}</td>
+    <td>${escapeHtml(i.recipient || '')}</td>
+    </tr>`).join('');
+      document.getElementById('searchResults').innerHTML = `<table><thead><tr><th>tracking</th><th>queue</th><th>status</th><th>recipient</th><th>action</th></tr></thead><tbody>${rows}</tbody></table>`;
+    }
+
+    /* When user clicks Verify in search result -> load into pending via verify endpoint */
+    async function verifyFromSearch(tracking) {
+      setStatus('');
+      try {
+        const res = await fetch(`/api/parcels/${encodeURIComponent(tracking)}/verify`, { credentials: "include",method:"POST"});
+        if (!res.ok) { setStatus(''); return; }
+        const info = await res.json();
+        pendingVerification = {
+          tracking: info.tracking,
+          queue: info.queue_number || info.queue || '',
+          recipient: info.recipient_name ?? info.recipient ?? '',
+          ts: Date.now()
+        };
+        renderPendingBox();
+        openPendingPopup();
+        showDetail(info);
+
+        setStatus('');
+      } catch (err) {
+        setStatus('');
+      }
+    }
+
+    /* When user clicks Confirm in search result -> move into pending so staff can fill recipient and re-enter tracking */
+    function confirmFromSearch(tracking, recipFromSearch) {
+      pendingVerification = { tracking: tracking, queue: '', recipient: recipFromSearch || '', ts: Date.now() };
+      renderPendingBox();
+      setStatus('');
+    }
+
+    /* ---------- Detailed view ---------- */
+    function showDetail(info) {
+      if (!info) { document.getElementById('detailView').innerHTML = '<div class="muted">No detail</div>'; return; }
+      const t = info.tracking || info.tracking_number || '';
+      const q = info.queue || info.queue_number || '';
+      const r = info.recipient_name || info.recipient || info.recipient;
+      const s = info.status || info.state || '';
+      document.getElementById('detailView').innerHTML = `<div><strong>Tracking:</strong> ${escapeHtml(t)}</div>
+    <div><strong>Queue:</strong> ${escapeHtml(q)}</div>
+    <div><strong>Recipient:</strong> ${escapeHtml(r || '---')}</div>
+    <div><strong>Status:</strong> ${escapeHtml(s)}</div>`;
+    }
+
+    /* ---------- Reports ---------- */
+
+
+    /* ---------- init ---------- */
+    async function initReports() {
+
+  const now = new Date();
+  const thai = new Date(now.toLocaleString("en-US",{timeZone:"Asia/Bangkok"}));
+
+  const d = String(thai.getDate()).padStart(2,'0');
+  const m = String(thai.getMonth()+1).padStart(2,'0');
+  const y = thai.getFullYear();
+
+  const today = `${d}/${m}/${y}`;
+
+  r_start.value = today;
+  r_end.value = today;
+
+  loadReport();
+}
+
+    /* ---------- period values ---------- */
+    async function loadReportValues() {
+  const p = document.getElementById('r_period').value;
+
+  const res = await fetch(`/api/reports/dates?period=${p}`, {
+    credentials: "include"
+  });
+
+  if (!res.ok) return;
+
+  const arr = await res.json();
+
+  const s = document.getElementById('r_start');
+  const e = document.getElementById('r_end');
+
+  s.innerHTML = '';
+  e.innerHTML = '';
+
+  if (!arr.length) return;
+
+  arr.forEach(r => {
+    let label = r.period;
+
+    if (p === 'daily')
+      label = `${label.slice(0,4)}-${label.slice(4,6)}-${label.slice(6)}`;
+
+    if (p === 'monthly')
+      label = `${label.slice(0,4)}-${label.slice(4,6)}`;
+
+    s.add(new Option(label, r.period));
+    e.add(new Option(label, r.period));
+  });
+
+  /* auto first + last */
+  s.selectedIndex = 0;
+  e.selectedIndex = arr.length - 1;
+}
+
+    document.getElementById('r_period')
+  .addEventListener('change', async () => {
+    await loadReportValues();
+
+    // เลือกเดือนแรกอัตโนมัติ
+    const sel = document.getElementById('r_periodValues');
+    if (sel.options.length > 0) sel.selectedIndex = 0;
+
+    // โหลด report ทันที
+    loadReport();
+  });
+
+    /* ---------- load report ---------- */
+    function compact(d) {
+  return d ? d.replaceAll('-', '') : '';
+}
+
+function unslash(v) {
+  if (!v) return '';
+  const [d,m,y] = v.split('/');
+  return y+m+d;
+}
+async function loadReport() {
+
+  const start = unslash(document.getElementById('r_start').value);
+  const end   = unslash(document.getElementById('r_end').value);
+
+  if(!start || !end){
+    alert("กรุณาเลือกวันเริ่มและวันสิ้นสุด");
+    return;
+  }
+
+  const sres = await fetch(
+    `/api/reports/summary?period=daily&start=${start}&end=${end}`,
+    { credentials:"include" }
+  );
+
+  const sdata = await sres.json();
+
+  currentReportData = sdata.items || [];
+  renderReportTable(currentReportData);
+
+  document.getElementById('summary').innerHTML = `
+  <div class="bg-white rounded-xl shadow-sm border border-slate-100
+              flex divide-x divide-slate-100 overflow-hidden">
+
+    <!-- Check-in -->
+    <div class="flex-1 px-5 py-4">
+      <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+        พัสดุเข้า
+      </p>
+      <div class="flex items-center gap-2 mt-1">
+        <span class="material-symbols-outlined text-emerald-500 text-xl">
+          move_to_inbox
+        </span>
+        <span class="text-2xl font-bold text-slate-900">
+          ${sdata.checkin}
+        </span>
+      </div>
+    </div>
+
+    <!-- Check-out -->
+    <div class="flex-1 px-5 py-4">
+      <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+        พัสดุออก
+      </p>
+      <div class="flex items-center gap-2 mt-1">
+        <span class="material-symbols-outlined text-orange-500 text-xl">
+          outbox
+        </span>
+        <span class="text-2xl font-bold text-slate-900">
+          ${sdata.checkout}
+        </span>
+      </div>
+    </div>
+
+    <!-- Remaining -->
+    <div class="flex-1 px-5 py-4">
+      <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+        คงเหลือ
+      </p>
+      <div class="flex items-center gap-2 mt-1">
+        <span class="material-symbols-outlined text-blue-500 text-xl">
+          inventory_2
+        </span>
+        <span class="text-2xl font-bold text-slate-900">
+          ${sdata.remaining}
+        </span>
+      </div>
+    </div>
+
+  </div>
+`
+
+  const tres = await fetch(
+    `/api/reports/timeseries?period=daily&start=${start}&end=${end}`,
+    { credentials:"include" }
+  );
+
+  const tdata = await tres.json();
+
+  renderChart(tdata.labels, tdata.checkin, tdata.checkout, 'daily');
+}
+
+    /* ---------- table ---------- */
+function renderReportTable(items) {
+
+  if (!items || items.length === 0) {
+    document.getElementById('reportTable').innerHTML = `
+      <div class="text-slate-400 text-center py-20 text-sm">
+        ไม่มีรายการ
+      </div>`;
+    return;
+  }
+
+  const cards = items.map(p => `
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-100
+                p-4 flex items-start gap-3 mb-3">
+
+      ${reportEditMode ? `
+        <input type="checkbox"
+          class="mt-1 scale-110 accent-orange-500"
+          onchange="toggleSelect('${escapeJs(p.tracking_number || p.tracking)}', this.checked)">
+      ` : ''}
+
+      <div class="flex gap-4 items-start flex-1">
+
+        <!-- Queue -->
+        <div class="size-10 rounded-full bg-slate-50 border
+                    flex items-center justify-center
+                    font-bold text-sm text-slate-700">
+          ${p.queue_number || p.queue || "-"}
+        </div>
+
+        <!-- Info -->
+        <div class="min-w-0">
+
+          <p class="font-semibold text-slate-800 truncate">
+            ${escapeHtml(p.tracking_number || p.tracking)}
+          </p>
+
+          <div class="flex flex-wrap items-center gap-2 mt-1">
+
+            <!-- Status -->
+            <span class="text-[11px] px-2 py-0.5 rounded-full
+                         bg-orange-100 text-orange-700 font-medium">
+              ${escapeHtml(p.status)}
+            </span>
+
+            <!-- Recipient -->
+            <span class="text-[11px] px-2 py-0.5 rounded-full
+                         bg-slate-100 text-slate-600 font-medium
+                         truncate max-w-[160px]">
+              ${escapeHtml(p.recipient || "")}
+            </span>
+
+          </div>
+
+        </div>
+      </div>
+    </div>
+  `).join('');
+
+  document.getElementById('reportTable').innerHTML = `
+    <div class="flex flex-col">
+      ${cards}
+    </div>`;
+}
+
+    /* ---------- edit mode ---------- */
+    function toggleReportEdit() {
+  reportEditMode = !reportEditMode;
+  selectedToDelete.clear();
+
+  const removeBtn = document.getElementById('removeBtn');
+
+  if (reportEditMode) {
+    removeBtn.hidden = false;   // 👉 เข้าโหมดแก้ไข = โชว์
+    removeBtn.disabled = true; // ยังเลือกไม่ได้
+  } else {
+    removeBtn.hidden = true;    // 👉 ออกโหมดแก้ไข = ซ่อน
+    removeBtn.disabled = true;
+  }
+
+  renderReportTable(currentReportData);
+}
+
+    function toggleSelect(tracking, checked) {
+  if (checked) selectedToDelete.add(tracking);
+  else selectedToDelete.delete(tracking);
+
+  document.getElementById('removeBtn').disabled =
+    selectedToDelete.size === 0;
+}
+
+    /* ---------- delete ---------- */
+    async function removeSelected() {
+  if (selectedToDelete.size === 0) return;
+
+  const res = await fetch('/api/parcels/bulk_delete', {
+    credentials: "include",
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ trackings: Array.from(selectedToDelete) })
+  });
+
+  if (!res.ok) {
+    alert('ลบรายการไม่สำเร็จ');
+    return;
+  }
+
+  reportEditMode = false;
+  selectedToDelete.clear();
+
+  const removeBtn = document.getElementById('removeBtn');
+  removeBtn.hidden = true;
+  removeBtn.disabled = true;
+
+  await loadReport();
+}
+
+    /* ---------- chart ---------- */
+    function renderChart(labels, checkin, checkout, period) {
+      const formattedLabels = labels.map(l => {
+        if (period === 'daily' && l.length === 8) return `${l.slice(0, 4)}-${l.slice(4, 6)}-${l.slice(6)}`;
+        if (period === 'monthly' && l.length === 6) return `${l.slice(0, 4)}-${l.slice(4, 6)}`;
+        return l;
+      });
+
+      const ctx = document.getElementById('summaryChart').getContext('2d');
+      if (chartInst) chartInst.destroy();
+      // gradient เขียว
+  const greenGrad = ctx.createLinearGradient(0, 0, 0, 180)
+  greenGrad.addColorStop(0, 'rgba(34,197,94,0.25)')
+  greenGrad.addColorStop(1, 'rgba(34,197,94,0)')
+
+  // gradient ส้ม
+  const orangeGrad = ctx.createLinearGradient(0, 0, 0, 180)
+  orangeGrad.addColorStop(0, 'rgba(249,115,22,0.25)')
+  orangeGrad.addColorStop(1, 'rgba(249,115,22,0)')
+      chartInst = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: formattedLabels,
+          datasets: [{
+          label: 'พัสดุเข้า',
+          data: checkin,
+          borderColor: '#22c55e',
+          backgroundColor: greenGrad,
+          usePointStyle: true,
+          fill: true,
+          tension: 0.35,
+          borderWidth: 3,
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          pointBackgroundColor: '#fff',
+          pointBorderColor: '#22c55e',
+          pointBorderWidth: 2
+          
+        },
+        {
+          label: 'พัสดุออก',
+          data: checkout,
+          borderColor: '#f97316',
+          backgroundColor: orangeGrad,
+          fill: true,
+          tension: 0.35,
+          borderWidth: 3,
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          pointBackgroundColor: '#fff',
+          pointBorderColor: '#f97316',
+          pointBorderWidth: 2
+        }
+          ]
+        },
+        options: { responsive: true,plugins: {
+    legend: {
+      position: 'top',
+      labels: {
+        usePointStyle: true,     // ⭐ สำคัญ
+        pointStyle: 'circle',    // ⭐ วงกลม
+        boxWidth: 8,
+        boxHeight: 8,
+        padding: 12,
+        font: { size: 11 }
+      }
+    }
+  }, scales: { y: { beginAtZero: true } } }
+      });
+    }
+
+    /* ---------- export ---------- */
+    function exportReport(fmt = "csv") {
+
+  const start = unslash(document.getElementById("r_start").value);
+  const end   = unslash(document.getElementById("r_end").value);
+
+  if(!start || !end){
+    alert("กรุณาเลือกวันเริ่มและวันสิ้นสุด");
+    return;
+  }
+
+  const qs = new URLSearchParams({
+    period: "daily",
+    start: start,
+    end: end,
+    fmt: fmt
+  });
+
+  window.location = `/api/reports/export?${qs.toString()}`;
+}
+    /* ---------- Utilities ---------- */
+    function setStatus(s) { try { document.getElementById('scanStatus').innerText = s; } catch (e) { } }
+    function escapeHtml(s) { return String(s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+    function escapeAttr(s) { return (String(s || '').replace(/"/g, '&quot;')); }
+    function escapeJs(s) { return String(s || '').replace(/'/g, "\\'").replace(/"/g, '\\"'); }
+    async function safeJson(res) { try { return await res.json(); } catch (e) { return {}; } }
+
+    /* optional: refresh recent list if you have an element (not implemented here) */
+    function refreshRecentIfExists() {
+      // if you maintain a "recent" list, call /api/parcels and re-render it.
+    }
+
+    /* initialize report values on load */
+    window.addEventListener('load', () => { if (document.querySelector('.tabBtn.active').dataset.tab === 'reports') initReports(); });
+
+
+
+    function startCamera() {
+
+      if (mainScanner) return
+      document.getElementById("cameraOverlay").classList.remove("hidden")
+      cameraLocked = false
+      mainScanner = new Html5Qrcode("reader")
+
+      Html5Qrcode.getCameras().then(cams => {
+
+        if (!cams.length) return alert("ไม่พบกล้อง")
+
+        const camId = cams[cams.length - 1].id
+
+        mainScanner.start(
+          camId,
+          { fps: 10, qrbox: 220 },
+          txt => {
+            if (cameraLocked) return
+            cameraLocked = true
+
+            handleScan(txt.trim())
+            setTimeout(stopCamera, 400)
+          }
+        )
+      }).catch(e => alert(e))
+    }
+
+
+    function stopCamera() {
+      if (!mainScanner) return
+
+      mainScanner.stop().then(() => {
+        mainScanner.clear()
+        mainScanner = null
+        cameraLocked = false
+
+        document.getElementById("cameraOverlay").classList.add("hidden")
+      })
+    }
+
+
+
+
+    async function startCameraConfirm() {
+
+      if (confirmScanner || confirmStopping) return
+
+      const recipientInput = document.getElementById('pendingRecipientInput')
+
+      if (!recipientInput || !recipientInput.value.trim()) {
+        openRecipientPopup()
+        return
+      }
+      document.getElementById("confirmCameraOverlay").classList.remove("hidden")
+
+      cameraLocked = false
+      setStatus('')
+
+      confirmScanner = new Html5Qrcode("confirmReader")
+
+      const cams = await Html5Qrcode.getCameras()
+
+      if (!cams.length) {
+        alert("ไม่พบกล้อง")
+        confirmScanner = null
+        return
+      }
+
+      const camId = cams[cams.length - 1].id
+
+      await confirmScanner.start(
+        camId,
+        { fps: 10, qrbox: 250 },
+        async txt => {
+
+          if (cameraLocked) return
+          cameraLocked = true
+
+          const scanned = txt.trim()
+
+          if (pendingVerification && scanned === pendingVerification.tracking) {
+
+            const recipientToSend = recipientInput.value.trim()
+            doConfirmPickup(scanned, recipientToSend)
+
+          } else {
+            openMismatchPopup()
+          }
+
+          await stopConfirmCamera()
+        }
+      )
+    }
+    async function stopConfirmCamera() {
+
+      if (!confirmScanner) return
+
+      confirmStopping = true
+
+      try {
+        await confirmScanner.stop()
+        confirmScanner.clear()
+      } catch { }
+
+      confirmScanner = null
+      cameraLocked = false
+      confirmStopping = false
+
+      document.getElementById("confirmCameraOverlay").classList.add("hidden")
+    }
+
+
+
+    /* popup helpers */
+    function showPopup(q, t) {
+      popupQueue.innerText = q || "-"
+      popupTracking.innerText = t || ""
+      queuePopup.classList.remove("hidden")
+      queuePopup.classList.add("flex")
+    }
+    function closePopup() {
+      queuePopup.classList.add("hidden")
+      queuePopup.classList.remove("flex")
+    }
+
+    function openPendingPopup() {
+      pendingPopup.classList.remove("hidden")
+      pendingPopup.classList.add("flex")
+
+      document.querySelectorAll(".modeBtn")
+        .forEach(b => b.classList.remove("activeMode"))
+
+      document.getElementById("manualConfirmBox").style.display = "none"
+    }
+
+    function closePendingPopup() {
+
+      if (confirmScanner) {
+        stopConfirmCamera()
+      }
+
+      pendingPopup.classList.add("hidden")
+      pendingPopup.classList.remove("flex")
+    }
+
+
+    function openAlreadyPopup() {
+      alreadyPopup.classList.remove("hidden")
+      alreadyPopup.classList.add("flex")
+    }
+
+    function closeAlreadyPopup() {
+      alreadyPopup.classList.add("hidden")
+      alreadyPopup.classList.remove("flex")
+    }
+    function openRecipientPopup() {
+      recipientPopup.classList.remove("hidden")
+      recipientPopup.classList.add("flex")
+    }
+
+    function closeRecipientPopup() {
+      recipientPopup.classList.add("hidden")
+      recipientPopup.classList.remove("flex")
+
+      const r = document.getElementById("pendingRecipientInput")
+      r?.focus()
+    }
+    function openMismatchPopup() {
+      mismatchPopup.classList.remove("hidden")
+      mismatchPopup.classList.add("flex")
+    }
+
+    function closeMismatchPopup() {
+      mismatchPopup.classList.add("hidden")
+      mismatchPopup.classList.remove("flex")
+
+      cameraLocked = false
+    }
+    function openNotFoundPopup() {
+      notFoundPopup.classList.remove("hidden")
+      notFoundPopup.classList.add("flex")
+    }
+
+    function closeNotFoundPopup() {
+      notFoundPopup.classList.add("hidden")
+      notFoundPopup.classList.remove("flex")
+    }
+
+function showSuccessPopup(tracking, queue, recipient){
+  const box = document.getElementById("successPopup")
+  const info = document.getElementById("successInfo")
+
+  info.innerHTML = `
+ ${escapeHtml(tracking)}<br>
+เลขคิว: ${escapeHtml(queue || "-")}<br>
+ผู้รับ: ${escapeHtml(recipient || "-")}
+`
+
+  box.classList.remove("hidden")
+  box.classList.add("flex")
+}
+
+function closeSuccessPopup(){
+  const box = document.getElementById("successPopup")
+
+  box.classList.add("hidden")
+  box.classList.remove("flex")
+
+  loadWaitingParcels()
+  scanInput.focus()
+}
+function applyDateFilter() {
+
+  const queue = document.getElementById("queueSearch")?.value.trim() || "";
+  const date = document.getElementById("dateFilter")?.value || "";
+
+  let url = `/api/parcels/search?`;
+
+  if (queue) url += `q=${encodeURIComponent(queue)}&`;
+  if (date) url += `date=${date}`;
+
+  fetch(url)
+    .then(r => r.json())
+    .then(j => {
+      renderParcelList(j.items);
+    });
+}
+
+function clearDateFilter(){
+  document.getElementById("dateFilter").value = ""
+  loadWaitingParcels("today")
+}
+
+
+
+    function logout() {
+  fetch("/admin/logout", {
+    credentials: "include"
+  }).then(() => {
+    location.replace("/login_admin")   // 👈 replace ไม่ให้กดย้อน
+  })
+}
+
+    async function loadWaitingParcels(date=null){
+      try {
+        const status = document.getElementById("statusFilter").value || "ทั้งหมด"
+
+        let url = `/api/parcels?status=${encodeURIComponent(status)}`
+
+if(date){
+  url += `&date=${encodeURIComponent(date)}`
+}
+        const res = await fetch(url, {credentials: "include"})
+
+        if (!res.ok) throw new Error("โหลดรายการไม่สำเร็จ")
+
+        const data = await res.json()
+        const box = document.getElementById("parcelList")
+
+        if (!data.length) {
+          box.innerHTML = `<div class="text-sm text-gray-400">ไม่พบพัสดุ</div>`
+          return
+        }
+
+        box.innerHTML = data.map(p => `
+<div onclick="handleScan('${p.tracking_number}')"
+     class="flex justify-between items-center p-4 bg-white rounded-xl mb-2 border cursor-pointer hover:bg-orange-50">
+
+  <div class="flex gap-4">
+
+    <!-- queue circle -->
+    <div class="size-10 rounded-full border flex items-center justify-center font-bold">
+      ${p.queue_number ?? "-"}
+    </div>
+
+    <div>
+      <p class="font-bold">${p.tracking_number}</p>
+
+      <div class="flex items-center gap-2 mt-1">
+        <span class="text-xs bg-orange-100 px-2 rounded">
+          ${p.status}
+        </span>
+      </div>
+      <div>
+      ${p.created_at ? `
+<span class="text-xs bg-green-100 text-green-700 px-2 rounded">
+${new Date(p.created_at).toLocaleString("th-TH", { timeZone: "Asia/Bangkok" })}
+</span>` : ``}
+    </div>
+
+  </div>
+</div>
+</div>
+`).join("")
+
+      } catch (e) {
+        document.getElementById("parcelList").innerHTML =
+          `<div class="text-red-400 text-sm">โหลดข้อมูลไม่ได้</div>`
+        console.error(e)
+      }
+    }
+    function renderParcelList(items){
+
+  const box = document.getElementById("parcelList")
+
+  if(!items || !items.length){
+    box.innerHTML = `<div class="text-sm text-gray-400">ไม่พบพัสดุ</div>`
+    return
+  }
+
+  box.innerHTML = items.map(p => `
+<div onclick="handleScan('${p.tracking_number || p.tracking}')"
+ class="flex justify-between items-center p-4 bg-white rounded-xl mb-2 border cursor-pointer hover:bg-orange-50">
+
+<div class="flex gap-4">
+
+<div class="size-10 rounded-full border flex items-center justify-center font-bold">
+${p.queue_number || p.queue || "-"}
+</div>
+
+<div>
+<p class="font-bold">${p.tracking_number || p.tracking}</p>
+
+<span class="text-xs bg-orange-100 px-2 rounded">
+${p.status}
+</span>
+
+${p.created_at ? `
+<div class="mt-1">
+<span class="text-xs bg-green-100 text-green-700 px-2 rounded">
+${new Date(p.created_at).toLocaleString("th-TH",{timeZone:"Asia/Bangkok"})}
+</span>
+</div>` : ``}
+
+</div>
+</div>
+</div>
+`).join("")
+}
+async function openReportPage(){
+  adminPage.classList.add("hidden")
+  reportPage.classList.remove("hidden")
+
+  await initReports()
+  loadReport()        // 👈 เพิ่มบรรทัดนี้
+}
+
+function closeReportPage(){
+ reportPage.classList.add("hidden")
+ adminPage.classList.remove("hidden")
+}
+function formatSlash(el) {
+  if (!el.value) return;
+
+  const [y,m,d] = el.value.split('-');
+  el.type = 'text';
+  el.value = `${d}/${m}/${y}`;
+}
+
+
+let pendingDelete = false;
+
+function openConfirmModal() {
+  if (selectedToDelete.size === 0) return;
+
+  document.getElementById('confirmText').innerText =
+    `คุณต้องการลบรายการที่เลือก ${selectedToDelete.size} รายการ ใช่หรือไม่?`;
+
+  document.getElementById('confirmModal').classList.remove('hidden');
+  document.getElementById('confirmModal').classList.add('flex');
+}
+
+function closeConfirmModal() {
+  document.getElementById('confirmModal').classList.add('hidden');
+  document.getElementById('confirmModal').classList.remove('flex');
+}
+
+async function confirmDelete() {
+  closeConfirmModal();
+  await removeSelected();
+}
+function toggleExportMenu() {
+  const menu = document.getElementById('exportMenu');
+  menu.classList.toggle('hidden');
+}
+
+// ปิดเมนูเมื่อคลิกนอก
+document.addEventListener('click', e => {
+  const menu = document.getElementById('exportMenu');
+  if (!menu) return;
+
+  if (!e.target.closest('.fixed.bottom-5.right-5')) {
+    menu.classList.add('hidden');
+  }
+});
+  </script>
+
+  <script>
+const adminName = localStorage.getItem("admin_staff_name")
+
+if(adminName){
+  const el = document.getElementById("adminName")
+  if(el){
+    el.textContent = adminName
+  }
+}
+</script>
+
+</body>
+
+</html>

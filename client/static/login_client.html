@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+
+<html class="light" lang="th">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>NU Parcel System Login</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap"
+        rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai+Looped:wght@100..900&display=swap"
+        rel="stylesheet">
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#f8911b",
+                        "background-light": "#f8f7f5",
+                        "background-dark": "#231a0f",
+                    },
+                    fontFamily: {
+                        display: ["Noto Sans Thai Looped", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+    <style>
+        .academic-pattern {
+            background-color: #f8f7f5;
+            background-image: radial-gradient(#e9dcce 0.5px, transparent 0.5px), radial-gradient(#e9dcce 0.5px, #f8f7f5 0.5px);
+            background-size: 20px 20px;
+            background-position: 0 0, 10px 10px;
+        }
+
+        .dark .academic-pattern {
+            background-color: #231a0f;
+            background-image: radial-gradient(#3d2e1d 0.5px, transparent 0.5px), radial-gradient(#3d2e1d 0.5px, #231a0f 0.5px);
+        }
+    </style>
+    <style>
+        body {
+            min-height: max(884px, 100dvh);
+        }
+    </style>
+</head>
+
+<body class="bg-background-light font-display antialiased transition-colors duration-300">
+    <div class="academic-pattern min-h-screen flex flex-col items-center justify-center p-6">
+        <div class="w-full max-w-[200px] flex flex-col items-center mb-8">
+
+            <img src="/static/NUDPACK_LOGO.png" class="w-30 h-30 object-contain" alt="NUDPACK Logo">
+
+        </div>
+        <div
+            class="w-full max-w-[400px] bg-white dark:bg-[#2d2215] rounded-xl shadow-xl p-8 border border-[#e9dcce]/50 dark:border-[#3d2e1d]">
+            <form id="loginForm">
+                <div>
+                    <label class="flex flex-col gap-2">
+                        <span class="text-sm font-semibold">ชื่อพนักงานขนส่ง</span>
+
+                        <input id="staffInput"
+                            class=" block w-full pl-10 pr-10 py-3 rounded-lg border border-[#e9dcce] dark:border-[#3d2e1d] bg-[#fcfaf8] dark:bg-[#231a0f] text-[#1c150d] dark:text-white appearance-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-200 outline-none"
+                            placeholder="กรุณากรอก ชื่อ-นามสกุล" required>
+                    </label>
+
+                </div>
+                <div class="text-center text-xs text-gray-400 mt-4"></div>
+                <div>
+                    <label class="flex flex-col gap-2">
+                        <span class="text-[#1c150d] dark:text-white text-sm font-semibold leading-normal ml-1">บริษัทขนส่ง</span>
+                        <div class="relative flex items-center">
+                            <div
+                                class="absolute left-3 text-[#9e7647] flex items-center justify-center pointer-events-none">
+                                <span class="material-symbols-outlined text-[20px]">local_shipping</span>
+                            </div>
+                            <div id="carrierDropdown" class="relative w-full">
+
+                                <!-- Selected -->
+                                <div id="carrierSelected" onclick="toggleCarrier()" class="cursor-pointer flex items-center justify-between pl-3 pr-3 py-3 rounded-lg border
+         bg-[#fcfaf8]">
+
+                                    <div class="flex items-center gap-3">
+                                        <img id="selectedLogo" class="w-6 h-6 hidden">
+                                        <span id="selectedCarrier">เลือกบริษัทขนส่ง</span>
+                                    </div>
+
+                                    <span class="material-symbols-outlined">expand_more</span>
+                                </div>
+
+                                <!-- List -->
+                                <div id="carrierList"
+                                    class="absolute z-full hidden mt-2 w-full bg-white rounded-lg shadow">
+
+                                </div>
+                            </div>
+
+
+
+                        </div>
+                    </label>
+                </div>
+                <div class="text-center text-xs text-gray-400 mt-4"></div>
+                <div class="pt-2">
+                    <button
+                        class="w-full bg-primary hover:bg-primary/90 active:scale-[0.98] text-white font-bold py-4 px-6 rounded-lg shadow-md shadow-primary/20 transition-all duration-200 flex items-center justify-center gap-2"
+                        type="button" onclick="login()">
+                        <span>เข้าสู่ระบบ</span>
+                    </button>
+                    <div class="text-center text-xs text-gray-400 mt-4"></div>
+                </div>
+                <div class="text-center">
+                </div>
+            </form>
+        </div>
+    </div>
+    <!-- Popup Alert -->
+    <div id="alertPopup" class="fixed inset-0 bg-black/40 hidden items-center justify-center z-50">
+
+        <div class="bg-white dark:bg-[#2d2215] rounded-xl p-6 w-72 text-center shadow-xl">
+
+            <div class="text-red-500 mb-2">
+                <span class="material-symbols-outlined text-4xl">error</span>
+            </div>
+
+            <p id="alertText" class="text-sm mb-4"></p>
+
+            <button onclick="closeAlert()" class="w-full bg-primary text-white py-2 rounded-lg font-semibold">
+                ตกลง
+            </button>
+
+        </div>
+    </div>
+
+
+    <script>
+        const SERVER = location.origin
+
+        let selectedCarrierId = null
+
+        async function loadCarriers() {
+            const r = await fetch(`${SERVER}/api/carriers`)
+            const carriers = await r.json()
+
+            const list = document.getElementById("carrierList")
+
+            carriers.forEach(c => {
+
+                list.innerHTML += `
+<div onclick="selectCarrier('${c.carrier_id}','${c.carrier_name}','${c.logo}')"
+     class="flex items-center gap-3 px-4 py-2 hover:bg-orange-50 cursor-pointer">
+
+<img src="${c.logo}" class="w-6 h-6 object-cover rounded-full border ">
+
+
+<span>${c.carrier_name}</span>
+
+</div>`
+            })
+        }
+
+
+        async function login() {
+
+    const staff = document.getElementById("staffInput").value.trim()
+
+    if (!staff) {
+        showAlert("กรุณากรอกชื่อพนักงาน")
+        return
+    }
+
+    if (!selectedCarrierId) {
+        showAlert("กรุณาเลือกบริษัทขนส่ง")
+        return
+    }
+
+    const res = await fetch("/api/login_client", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",   // ⭐ สำคัญ
+        body: JSON.stringify({
+            carrier_id: selectedCarrierId,
+            carrier_staff_name: staff
+        })
+    })
+
+    if (!res.ok) {
+        showAlert("เข้าสู่ระบบไม่สำเร็จ")
+        return
+    }
+
+    // save label
+    localStorage.setItem("staff_name", staff)
+    localStorage.setItem(
+        "carrier_name",
+        document.getElementById("selectedCarrier").innerText
+    )
+
+    // ✅ login สำเร็จ ค่อยเข้า client
+    location.href = "/client"
+}
+
+
+        loadCarriers()
+
+        const alertPopup = document.getElementById("alertPopup")
+        const alertText = document.getElementById("alertText")
+
+        function showAlert(msg) {
+            alertText.innerText = msg
+            alertPopup.classList.remove("hidden")
+            alertPopup.classList.add("flex")
+        }
+
+        function closeAlert() {
+            alertPopup.classList.add("hidden")
+            alertPopup.classList.remove("flex")
+        }
+
+        
+
+        function toggleCarrier() {
+            carrierList.classList.toggle("hidden")
+        }
+
+        function selectCarrier(id, name, logo) {
+
+            selectedCarrierId = id
+
+            document.getElementById("selectedCarrier").innerText = name
+
+            const img = document.getElementById("selectedLogo")
+            img.src = logo
+            img.classList.remove("hidden")
+
+            carrierList.classList.add("hidden")
+        }
+
+    </script>
+
+
+
+</body>
+
+</html>

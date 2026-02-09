@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html class="light" lang="th">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ระบบสแกนพัสดุ NU</title>
+
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai+Looped:wght@100..900&display=swap"
+        rel="stylesheet">
+
+
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: { primary: "#f95f06" },
+                    fontFamily: {
+                        display: ["Noto Sans Thai Looped", "sans-serif"]
+                    }
+                }
+            }
+        }
+    </script>
+
+
+    <style>
+        body {
+            font-family: Inter
+        }
+
+        .scan-zone {
+            border: 2px dashed #e9d8ce
+        }
+
+        .latest {
+            background: #fff6e5
+        }
+    </style>
+</head>
+
+<body class="bg-background-light min-h-screen flex flex-col font-display">
+
+
+    <header class="sticky top-0 bg-white/80 backdrop-blur border-b p-4 z-40">
+        <div class="max-w-xl mx-auto flex justify-between items-center">
+
+            <!-- LEFT -->
+            <div class="flex gap-3 items-center">
+                <img src="/static/NUDPACK_LOGO2.png" class="w-10 h-10 object-contain" />
+
+                <div>
+                    <h2 class="font-bold">NUDPACK</h2>
+
+                    <p class="text-[10px] text-orange-400">
+                        Naresuan University Dormitory Parcel System
+                    </p>
+                    <div class="mt-2 inline-flex items-center rounded-xl bg-white/80 backdrop-blur
+shadow px-2 py-1 text-[10px]">
+
+    <span class="material-symbols-outlined text-[12px] text-gray-400 mr-1">badge</span>
+
+    <span id="staffLabel" class="font-medium text-gray-700"></span>
+
+    <span class="mx-1 text-gray-300">•</span>
+
+    <span id="carrierLabel" class="text-orange-400"></span>
+
+</div>
+                </div>
+            </div>
+
+            <!-- RIGHT -->
+            <button onclick="logout()" class="flex items-center gap-1 px-3 py-1.5 rounded-lg
+bg-red-50 text-red-600 text-xs font-semibold
+hover:bg-red-100 active:scale-95 transition">
+
+                <span class="material-symbols-outlined text-sm">
+                    logout
+                </span>
+            </button>
+
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-xl mx-auto w-full pb-40">
+
+        <section class="p-4 mt-4">
+            <div class="bg-white rounded-xl p-4 scan-zone">
+
+                <label class="text-sm font-semibold text-orange-400">กรอกเลขพัสดุ</label>
+
+                <div class="flex mt-2">
+                    <input id="scanInput" class="flex-1 border rounded-l-lg h-12 px-3" placeholder="Enter tracking" />
+
+                    <button onclick="handleScan(scanInput.value.trim())"
+                        class="bg-primary text-white px-4 rounded-r-lg">
+                        <span class="material-symbols-outlined">barcode_scanner</span>
+                    </button>
+                </div>
+
+                <div class="flex gap-3 mt-4">
+                    <button onclick="startCamera()"
+                        class="flex-1 bg-primary text-white rounded-lg h-12 flex justify-center items-center gap-2">
+                        <span class="material-symbols-outlined">photo_camera</span>เปิดกล้อง
+                    </button>
+
+                    <button onclick="stopCamera()"
+                        class="flex-1 border rounded-lg h-12 flex justify-center items-center gap-2">
+                        <span class="material-symbols-outlined">videocam_off</span>ปิดกล้อง
+                    </button>
+                </div>
+
+                <div id="messages" class="text-sm mt-2"></div>
+
+            </div>
+        </section>
+
+        <section class="px-4 mt-6">
+
+            <div class="flex justify-between mb-3">
+                <div>
+                    <h3 class="font-bold">คิวแบบเรียลไทม์</h3>
+                    <p class="text-sm text-orange-400">รายการที่รอยืนยัน</p>
+                </div>
+
+                <span id="previewBadge" class="bg-primary/10 text-primary text-xs px-3 py-1 rounded-full">0 ชิ้น</span>
+            </div>
+
+            <div id="previewBody" class="flex flex-col gap-3"></div>
+
+        </section>
+
+    </main>
+
+    <footer class="fixed bottom-0 left-0 right-0 bg-white border-t p-4">
+        <div class="max-w-xl mx-auto">
+
+            <div class="flex justify-between text-sm mb-3">
+                <span>ทั้งหมด: <strong id="previewCount">0</strong></span>
+            </div>
+
+            <button id="confirmAllBtn" onclick="confirmAll()" disabled
+                class="w-full bg-primary text-white py-4 rounded-xl font-bold disabled:opacity-50">
+                ยืนยันและอัปโหลดทั้งหมด
+            </button>
+
+        </div>
+    </footer>
+    <div id="queuePopup" class="fixed inset-0 bg-black/40 hidden items-center justify-center z-50">
+
+        <div class="bg-white rounded-2xl p-8 w-80 text-center shadow-xl">
+
+            <p class="text-sm text-gray-400 mb-2">หมายเลขคิว</p>
+
+            <div id="popupQueue" class="text-7xl font-bold text-primary mb-3">-</div>
+
+            <p id="popupTracking" class="text-sm text-gray-500 mb-6"></p>
+
+            <button onclick="closePopup()" class="w-full bg-primary text-white py-3 rounded-xl font-bold">
+                ตกลง
+            </button>
+
+        </div>
+    </div>
+    <div id="cameraOverlay"
+  class="fixed inset-0 bg-black/70 hidden z-50 flex items-center justify-center">
+
+  <div class="bg-white rounded-2xl p-4 w-80 shadow-xl">
+
+    <div class="text-sm font-semibold mb-2 text-center text-gray-700">
+      สแกน QR code
+    </div>
+
+    <div id="reader" class="rounded-lg overflow-hidden"></div>
+
+    <button onclick="stopCamera()"
+      class="mt-4 w-full bg-orange-500 text-white py-2 rounded-xl font-semibold">
+      ปิดกล้อง
+    </button>
+
+  </div>
+</div>
+    <script>
+        const SERVER = location.origin
+
+        const scanInput = document.getElementById("scanInput")
+        const previewBody = document.getElementById("previewBody")
+        const previewCount = document.getElementById("previewCount")
+        const previewBadge = document.getElementById("previewBadge")
+        const confirmAllBtn = document.getElementById("confirmAllBtn")
+        const messages = document.getElementById("messages")
+
+        let preview = JSON.parse(localStorage.getItem("preview") || "[]")
+
+        preview = preview.map(p => ({
+            ...p,
+            created_at: p.created_at || new Date().toISOString()
+        }))
+
+        let qrScanner = null
+        let busy = false
+        let scanningLocked = false
+
+        scanInput.addEventListener("keydown", e => {
+            if (e.key === "Enter") {
+                handleScan(scanInput.value.trim())
+                scanInput.value = ""
+            }
+        })
+
+        function beep(ok = true) {
+            const c = new AudioContext()
+            const o = c.createOscillator()
+            o.connect(c.destination)
+            o.frequency.value = ok ? 880 : 200
+            o.start(); o.stop(c.currentTime + .12)
+        }
+let mainScanner = null
+let cameraLocked = false
+
+function startCamera() {
+  if (mainScanner) return
+
+  document.getElementById("cameraOverlay").classList.remove("hidden")
+  cameraLocked = false
+
+  mainScanner = new Html5Qrcode("reader")
+
+  Html5Qrcode.getCameras().then(cams => {
+    if (!cams.length) {
+      alert("ไม่พบกล้อง")
+      stopCamera()
+      return
+    }
+
+    // เลือกกล้องหลัง ถ้ามี
+    const backCam = cams.find(c =>
+      c.label.toLowerCase().includes("back") ||
+      c.label.toLowerCase().includes("rear")
+    )
+
+    const camId = backCam ? backCam.id : cams[cams.length - 1].id
+
+    mainScanner.start(
+      camId,
+      { fps: 10, qrbox: 220 },
+      txt => {
+        if (cameraLocked) return
+        cameraLocked = true
+
+        handleScan(txt.trim())
+        setTimeout(stopCamera, 400)
+      }
+    )
+  }).catch(e => {
+    alert(e)
+    stopCamera()
+  })
+}
+
+function stopCamera() {
+  if (!mainScanner) {
+    document.getElementById("cameraOverlay").classList.add("hidden")
+    return
+  }
+
+  mainScanner.stop().then(() => {
+    mainScanner.clear()
+    mainScanner = null
+    cameraLocked = false
+    document.getElementById("cameraOverlay").classList.add("hidden")
+  })
+}
+
+        async function handleScan(tracking) {
+            if (!tracking || busy) return
+            busy = true
+
+            if (preview.find(p => p.tracking === tracking)) {
+                flash("พัสดุนี้ถูกสแกนแล้ว", false); beep(false); busy = false; return
+            }
+
+            try {
+                const r = await fetch(`${SERVER}/api/parcels`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        tracking_number: tracking,
+                        provisional: true
+                    })
+                })
+
+                if (r.status === 409) {
+                    const d = await fetch(`${SERVER}/api/parcels/${tracking}`).then(r => r.json())
+                    addPreview(d.tracking_number, d.queue_number, d.status)
+                } else {
+                    const j = await r.json()
+                    addPreview(tracking, j.queue_number, "กำลังรอ")
+                }
+
+                beep()
+            } catch (e) { flash(e.message, false) }
+            busy = false
+        }
+
+        function addPreview(t, q, s) {
+            preview.unshift({ tracking: t, queue: q, status: s, created_at: new Date().toISOString() })
+            save(); render()
+
+            // SHOW BIG QUEUE POPUP
+            showPopup(q, t)
+        }
+
+
+        function render() {
+            previewBody.innerHTML = ""
+
+            preview.forEach((p, i) => {
+
+                previewBody.innerHTML += `
+<div class="flex justify-between items-center p-4 bg-white rounded-xl ${i == 0 ? "latest" : ""}">
+<div class="flex gap-4">
+<div class="size-10 rounded-full border flex items-center justify-center font-bold">
+${p.queue ?? "-"}
+</div>
+
+<div>
+<p class="font-bold">${p.tracking}</p>
+
+<div class="flex items-center gap-2 mt-1">
+<span class="text-xs bg-orange-100 px-2 rounded">${p.status}</span>
+
+${p.created_at ? `
+<span class="text-xs bg-green-100 text-green-700 px-2 rounded">
+${new Date(p.created_at).toLocaleString("th-TH", { timeZone: "Asia/Bangkok" })}
+</span>` : ``}
+
+
+
+</div>
+</div>
+</div>
+
+<button onclick="removeAt(${i})" class="text-red-500">
+<span class="material-symbols-outlined">delete</span>
+</button>
+
+</div>`
+            })
+
+            previewCount.innerText = preview.length
+            previewBadge.innerText = preview.length + " ชิ้น"
+            confirmAllBtn.disabled = !preview.length
+        }
+
+
+        async function removeAt(i) {
+            const p = preview[i]
+            await fetch(`${SERVER}/api/parcels/${p.tracking}`, { method: "DELETE" })
+            preview.splice(i, 1); save(); render()
+        }
+
+        async function confirmAll() {
+            for (const p of preview) {
+                await fetch(`${SERVER}/api/parcels/${p.tracking}/confirm_pending`, { method: "POST" })
+            }
+            preview = []; save(); render()
+            flash("ยืนยันแล้ว", true)
+        }
+
+        function save() { localStorage.setItem("preview", JSON.stringify(preview)) }
+
+        function flash(t, ok = true) {
+            messages.innerHTML = (ok ? "✔ " : "✖ ") + t
+            messages.className = ok ? "text-green-600" : "text-red-500"
+            setTimeout(() => messages.innerHTML = "", 3000)
+        }
+
+        render()
+        const queuePopup = document.getElementById("queuePopup")
+        const popupQueue = document.getElementById("popupQueue")
+        const popupTracking = document.getElementById("popupTracking")
+
+        function showPopup(queue, tracking) {
+            popupQueue.innerText = queue || "-"
+            popupTracking.innerText = tracking
+            queuePopup.classList.remove("hidden")
+            queuePopup.classList.add("flex")
+        }
+
+        function closePopup() {
+            queuePopup.classList.add("hidden")
+            queuePopup.classList.remove("flex")
+        }
+
+        function logout() {
+            fetch("/logout", {
+                credentials: "include"
+            }).then(() => {
+                location.replace("/login_client")   // 👈 replace ไม่ให้กดย้อน
+            })
+        }
+        const staffLabel = document.getElementById("staffLabel")
+        const carrierLabel = document.getElementById("carrierLabel")
+
+        staffLabel.innerText = localStorage.getItem("staff_name") || "-"
+        carrierLabel.innerText = localStorage.getItem("carrier_name") || "-"
+
+    </script>
+    <!-- Queue Popup -->
+
+
+</body>
+
+</html>

@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html class="light" lang="th">
+
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Parcel Admin Login</title>
+
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai+Looped:wght@100..900&display=swap" rel="stylesheet">
+
+<script>
+tailwind.config = {
+darkMode: "class",
+theme: {
+extend: {
+colors: {
+primary: "#f8911b",
+"background-light": "#f8f7f5",
+"background-dark": "#231a0f",
+},
+fontFamily: {
+display: ["Noto Sans Thai Looped", "sans-serif"]
+},
+},
+},
+}
+</script>
+
+<style>
+.academic-pattern {
+background-color: #f8f7f5;
+background-image:
+radial-gradient(#e9dcce 0.5px, transparent 0.5px),
+radial-gradient(#e9dcce 0.5px, #f8f7f5 0.5px);
+background-size: 20px 20px;
+background-position: 0 0, 10px 10px;
+}
+</style>
+
+</head>
+
+<body class="bg-background-light font-display antialiased">
+
+<div class="academic-pattern min-h-screen flex flex-col items-center justify-center p-6">
+
+<div class="w-full max-w-[200px] flex flex-col items-center mb-8">
+<img src="/static/NUDPACK_LOGO.png" class="w-30 h-30 object-contain">
+</div>
+
+<div class="w-full max-w-[400px] bg-white rounded-xl shadow-xl p-8 border border-[#e9dcce]/50">
+
+<div class="space-y-4">
+<input id="recipientName"
+placeholder="ชื่อผู้รับ"
+class="w-full py-3 px-4 rounded-lg border bg-[#fcfaf8]">
+
+<button onclick="loginRecipient()"
+class="w-full bg-primary text-white font-bold py-4 rounded-lg">
+เข้าสู่ระบบ
+</button>
+
+</div>
+
+</div>
+</div>
+
+<script>
+async function loginRecipient(){
+
+const name = recipientName.value.trim()
+
+if(!name) return showAlert("กรุณากรอกชื่อ")
+
+const r = await fetch("/recipient/login",{
+  credentials:"include",
+  method:"POST",
+  headers:{ "Content-Type":"application/json"},
+  body:JSON.stringify({
+    name
+  })
+})
+
+console.log("STATUS =", r.status)
+if(!r.ok){
+  showAlert("Login ไม่สำเร็จ")
+  return
+}
+
+const data = await r.json()
+
+localStorage.setItem("recipient_name", data.name)
+
+location.href="/recipient"
+}
+function showAlert(msg){
+  const box = document.getElementById("recipientAlert")
+  const text = document.getElementById("recipientAlertText")
+
+  text.innerText = msg
+  box.classList.remove("hidden")
+  box.classList.add("flex")
+}
+
+function closeRecipientAlert(){
+  recipientAlert.classList.add("hidden")
+  recipientAlert.classList.remove("flex")
+}
+</script>
+
+</body>
+</html>
