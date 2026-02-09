@@ -9,26 +9,31 @@ from typing import Generator
 # --------------------------------------------------
 DATABASE_URL = os.getenv("DATABASE_URL")
 
-if not DATABASE_URL:
-    raise RuntimeError("DATABASE_URL is not set")
+def normalize_db_url(url: str) -> str:
+    url = url.strip()
+    if url.startswith("postgres://"):
+        url = url.replace("postgres://", "postgresql+psycopg2://", 1)
 
-# --------------------------------------------------
-# SQLAlchemy engine
-# --------------------------------------------------
-engine = create_engine(
-    DATABASE_URL,
-    pool_pre_ping=True,     # ป้องกัน connection ตาย
-    pool_size=5,
-    max_overflow=10,
-)
+    if "sslmode=" not in url:
+        joiner = "&" if "?" in url else "?"
+        url = f"{url}{joiner}sslmode=require"
 
-SessionLocal = sessionmaker(
-    autocommit=False,
-    autoflush=False,
-    bind=engine,
-)
+    return url
 
-Base = declarative_base()
+
+if DATABASE_URL:
+    engine = create_engine(
+        normalize_db_url(DATABASE_URL),
+        pool_pre_ping=True,
+        pool_size=5,
+        max_overflow=10,
+    )
+else:
+    # local dev fallback
+    engine = create_engine(
+        "sqlite:///./parcel.db",
+        connect_args={"check_same_thread": False},
+    )
 
 # --------------------------------------------------
 # Init DB + seed data

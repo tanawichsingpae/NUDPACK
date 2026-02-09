@@ -58,11 +58,13 @@ def write_audit(db, *, entity, entity_id, action, user, details):
     db.add(log)
 
 
+IS_PROD = os.getenv("RENDER") == "true"
+
 app.add_middleware(
     SessionMiddleware,
     secret_key=SESSION_SECRET_KEY,
-    same_site="none",
-    https_only=True
+    same_site="none" if IS_PROD else "lax",
+    https_only=IS_PROD,
 )
 
 
@@ -70,15 +72,12 @@ from fastapi.middleware.cors import CORSMiddleware
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://parcelsystem.onrender.com",  # ⭐ domain จริงบน Render
-        "http://localhost:8000",              # dev (http ไม่ใช่ https)
-        "http://127.0.0.1:8000",
-    ],
+    allow_origin_regex=r"https://.*\.onrender\.com",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 # --- resolve project and static directories ---
 # file is server/app/api.py -> parents[2] => project root (ParcelSystem)
