@@ -2,7 +2,6 @@
 import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
-from typing import Generator
 
 # --------------------------------------------------
 # Database URL (from Render / Neon)
@@ -11,13 +10,24 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 
 def normalize_db_url(url: str) -> str:
     url = url.strip()
-    if url.startswith("postgres://"):
-        url = url.replace("postgres://", "postgresql+psycopg2://", 1)
 
+    # 🔎 debug (ดูใน Render log)
+    print("RAW DATABASE_URL =", repr(url))
+
+    # Neon / Heroku style
+    if url.startswith("postgres://"):
+        url = url.replace(
+            "postgres://",
+            "postgresql+psycopg2://",
+            1
+        )
+
+    # force ssl (Neon ต้องใช้)
     if "sslmode=" not in url:
         joiner = "&" if "?" in url else "?"
         url = f"{url}{joiner}sslmode=require"
 
+    print("NORMALIZED DATABASE_URL =", url)
     return url
 
 
@@ -29,11 +39,19 @@ if DATABASE_URL:
         max_overflow=10,
     )
 else:
-    # local dev fallback
+    # local dev fallback (สำคัญมาก)
     engine = create_engine(
         "sqlite:///./parcel.db",
         connect_args={"check_same_thread": False},
     )
+
+SessionLocal = sessionmaker(
+    autocommit=False,
+    autoflush=False,
+    bind=engine,
+)
+
+Base = declarative_base()
 
 # --------------------------------------------------
 # Init DB + seed data
