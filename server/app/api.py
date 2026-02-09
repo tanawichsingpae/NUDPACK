@@ -71,9 +71,9 @@ from fastapi.middleware.cors import CORSMiddleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "https://localhost:8000",
-        "https://127.0.0.1:8000",
-        "https://192.168.249.105:8000",
+        "https://parcelsystem.onrender.com",  # ⭐ domain จริงบน Render
+        "http://localhost:8000",              # dev (http ไม่ใช่ https)
+        "http://127.0.0.1:8000",
     ],
     allow_credentials=True,
     allow_methods=["*"],
