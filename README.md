@@ -1,70 +1,154 @@
-# ParcelSystem-MVP-prototype
+# NUPACK-NU Dorm  
+**Naresuan University Dormitory Parcel Management System**
 
-## ความต้องการพื้นฐาน
-- Python 3.10+
-- pip
-- (สำหรับ build) PyInstaller, Inno Setup (Windows)
+ระบบจัดการพัสดุหอพักนิสิต มหาวิทยาลัยนเรศวร  
+พัฒนาเพื่อเป็นส่วนหนึ่งของการศึกษาและทดลองใช้งานระบบสารสนเทศในสภาพแวดล้อมจริง
 
-## ขั้นตอนรันแบบไม่แพ็ก (พัฒนา/ทดสอบ)
+---
 
-### รัน Server (โฟลเดอร์ server)
+## 1. บทนำ (Introduction)
 
-1. สร้าง virtualenv และติดตั้ง
+ปัจจุบันการจัดการพัสดุในหอพักนิสิตมีปริมาณเพิ่มขึ้นอย่างต่อเนื่องจากการใช้บริการขนส่งพัสดุเอกชนหลายราย  
+การบันทึกข้อมูลด้วยวิธีดั้งเดิมอาจก่อให้เกิดปัญหา เช่น ความล่าช้า ความผิดพลาดในการรับพัสดุ และไม่สามารถตรวจสอบย้อนหลังได้อย่างเป็นระบบ
 
-```powershell
-python -m venv venv
-.\venv\Scripts\activate
-pip install -r requirements.txt
-```
+โครงงานนี้จึงมีวัตถุประสงค์เพื่อพัฒนา **ระบบจัดการพัสดุสำหรับหอพักนิสิตมหาวิทยาลัยนเรศวร**  
+โดยใช้เทคโนโลยีเว็บแอปพลิเคชันและฐานข้อมูล เพื่อช่วยเพิ่มประสิทธิภาพ ความถูกต้อง และความโปร่งใสในการดำเนินงาน
 
-2. รัน server
+---
 
-```powershell
-python -m server.app.main
-```
+## 2. วัตถุประสงค์ของระบบ (Objectives)
 
-Server จะเริ่ม uvicorn ที่พอร์ต 8000 และเริ่ม broadcast UDP เพื่อให้ client หาเจอ
+1. เพื่อพัฒนาระบบจัดการพัสดุที่สามารถบันทึก รับ–จ่าย และติดตามสถานะพัสดุได้
+2. เพื่อออกแบบระบบที่รองรับการทำงานของเจ้าหน้าที่หลายคน
+3. เพื่อจัดเก็บประวัติการใช้งานระบบ (Audit Log) สำหรับตรวจสอบย้อนหลัง
+4. เพื่อสร้างรายงานสรุปข้อมูลพัสดุในรูปแบบต่าง ๆ
+5. เพื่อทดสอบการใช้งานระบบบนสภาพแวดล้อม Cloud Computing จริง
 
-### รัน Client (โฟลเดอร์ client)
+---
 
-1. สร้าง virtualenv และติดตั้ง
+## 3. ขอบเขตของระบบ (Scope of the System)
 
-```powershell
-python -m venv venv
-.\venv\Scripts\activate
-pip install -r requirements.txt
-```
+### 3.1 ขอบเขตด้านผู้ใช้งาน
+- เจ้าหน้าที่หอพัก (Admin)
+- บุคลากรที่เกี่ยวข้องกับการรับ–จ่ายพัสดุ
 
-2. รัน client
+### 3.2 ขอบเขตด้านการทำงาน
+- การเพิ่มพัสดุเข้าระบบ (Check-in)
+- การยืนยันการรับพัสดุ (Checkout)
+- การค้นหาและตรวจสอบสถานะพัสดุ
+- การสร้างรายงานสรุป
+- การบันทึก Audit Log
 
-```powershell
-python client_app.py
-```
+### 3.3 ขอบเขตด้านเทคโนโลยี
+- Web Application
+- RESTful API
+- Cloud-based Database
 
-เมื่อ client พบ broadcast ของ server จะเติม `Server:` ใน UI ให้ และสามารถสแกน/พิมพ์เลข tracking แล้วส่งได้
+---
 
-## แพ็กเป็น .exe (ขั้นตอนแบบสั้น)
+## 4. ฟังก์ชันหลักของระบบ (System Features)
 
-1. ติดตั้ง PyInstaller
+### 4.1 การจัดการพัสดุ
+- บันทึกข้อมูลพัสดุ เช่น เลขพัสดุ ผู้ให้บริการ และชื่อผู้รับ
+- สร้างเลขคิวอัตโนมัติ
+- รองรับสถานะพัสดุ
+  - `PENDING`
+  - `RECEIVED`
+  - `PICKED_UP`
 
-```powershell
-pip install pyinstaller
-```
+### 4.2 การรับพัสดุ (Checkout)
+- ใช้กระบวนการ Double-scan เพื่อลดความผิดพลาด
+- ยืนยันชื่อผู้รับก่อนเปลี่ยนสถานะเป็นรับแล้ว
 
-2. แพ็ก Server
+### 4.3 ระบบผู้ดูแล (Admin – Soft Login)
+- Admin สามารถกำหนดชื่อผู้ใช้งานได้เอง
+- ใช้รหัสผ่านกลางของระบบ
+- เก็บชื่อผู้ใช้งานใน Audit Log ทุกครั้งที่มีการกระทำ
 
-```powershell
-pyinstaller --onefile --name ParcelServer server/app/main.py
-```
+### 4.4 รายงาน (Reports)
+- รายงานรายวัน รายเดือน และรายปี
+- แสดงจำนวนพัสดุรับเข้า รับออก และคงเหลือ
+- ส่งออกข้อมูลเป็นไฟล์ CSV และ Excel
 
-3. แพ็ก Client
+### 4.5 Audit Log
+- บันทึกการกระทำสำคัญของผู้ใช้งาน
+- ใช้ตรวจสอบย้อนหลังและเพิ่มความโปร่งใสของระบบ
 
-```powershell
-pyinstaller --onefile --windowed --name ParcelClient client/client_app.py
-```
+---
 
-4. สร้าง Installer โดยใช้ Inno Setup: ใช้ `build\inno_setup_installer.iss` แล้วคอมไพล์เป็น `ParcelSystem_Installer.exe`
+## 5. แบบจำลองข้อมูล (Data Model)
 
-## หมายเหตุเพิ่มเติม
-- Prototype นี้ใช้ SQLite เป็น storage (embedded) — server process เป็นผู้เขียนไฟล์ DB เท่านั้น จึงปลอดภัยจาก conflict
-- หากต้องการให้ server รันอัตโนมัติเมื่อเครื่องเปิด คุณสามารถลงทะเบียน `ParcelServer.exe` เป็น Windows Service ด้วย `nssm` (หรือใช้ Inno Setup to run it once postinstall)
+ระบบถูกออกแบบตามแนวคิด **Entity Relationship Diagram (ERD)**  
+ประกอบด้วยเอนทิตี้หลัก เช่น
+
+- User
+- Parcel
+- ParcelPickup
+- ParcelQueue
+- Report
+- AuditLog
+
+โดยมีความสัมพันธ์ระหว่างเอนทิตี้ที่รองรับการตรวจสอบย้อนกลับและการสร้างรายงาน
+
+---
+
+## 6. สถาปัตยกรรมของระบบ (System Architecture)
+
+Client (Web Browser)
+│
+▼
+FastAPI Backend (Render)
+│
+▼
+PostgreSQL Database (Neon)
+
+
+- Backend: FastAPI
+- Database: PostgreSQL (Neon)
+- Hosting: Render
+- ORM: SQLAlchemy
+
+---
+
+## 7. การพัฒนาและการติดตั้งระบบ (Implementation)
+
+### 7.1 เครื่องมือที่ใช้
+- Python
+- FastAPI
+- SQLAlchemy
+- PostgreSQL
+- HTML / JavaScript
+
+### 7.2 การรันระบบ
+```bash
+uvicorn server.app.main:app --host 0.0.0.0 --port 8000
+8. การทดสอบระบบ (Testing)
+การทดสอบประกอบด้วย
+
+การทดสอบการทำงานของแต่ละฟังก์ชัน (Functional Testing)
+
+การทดสอบการใช้งานจริงกับผู้ใช้ (User Acceptance Testing)
+
+การตรวจสอบความถูกต้องของข้อมูลและ Audit Log
+
+9. ความปลอดภัยของระบบ (Security Considerations)
+ไม่เปิดเผยข้อมูลสำคัญแก่ผู้ใช้ทั่วไป
+
+จำกัดสิทธิ์การเข้าถึงส่วน Admin
+
+บันทึกการใช้งานทุกครั้งใน Audit Log
+
+แยกระบบฐานข้อมูลออกจากฝั่ง Client
+
+10. สรุปผลการดำเนินงาน (Conclusion)
+ระบบจัดการพัสดุหอพักนิสิตมหาวิทยาลัยนเรศวรที่พัฒนาขึ้น
+สามารถช่วยลดภาระงานของเจ้าหน้าที่ เพิ่มความถูกต้องในการรับ–จ่ายพัสดุ
+และสามารถตรวจสอบข้อมูลย้อนหลังได้อย่างเป็นระบบ
+เหมาะสำหรับนำไปทดลองใช้งานจริงในระดับหน่วยงานหรือหอพักนิสิต
+
+ผู้พัฒนา
+โครงงานพัฒนาระบบสารสนเทศ
+มหาวิทยาลัยนเรศวร
+
+หมายเหตุ
+โครงงานนี้จัดทำขึ้นเพื่อการศึกษาและทดลองใช้งานเท่านั้น
