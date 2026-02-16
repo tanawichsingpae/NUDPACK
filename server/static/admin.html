@@ -60,7 +60,7 @@ input[name="confirmMode"]:checked + .modeBtn {
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
-<body class="bg-[#fafafa] font-display" onload="loadWaitingParcels()">
+<body class="bg-[#fafafa] font-display" onload="setDefaultToday()">
 
   <header class="sticky top-0 bg-white/80 backdrop-blur border-b p-4">
     <div class="max-w-xl mx-auto flex justify-between items-center">
@@ -99,21 +99,61 @@ hover:bg-red-100 active:scale-95 transition">
     <section class="p-4 relative mt-10">
       <div class="absolute right-6 -top-8 flex items-center gap-2">
   
-  <span class="text-sm font-medium text-gray-700">
-    รายงาน
-  </span>
+  <div class="relative inline-block text-left">
 
+  <!-- ปุ่มหลัก -->
   <button
-    onclick="openReportPage()"
+    onclick="toggleMoreMenu()"
     class="size-10 rounded-full
            bg-orange-500 text-white shadow-lg
            flex items-center justify-center
-           hover:bg-orange-600 active:scale-95 transition"
+           hover:bg-orange-400 active:scale-95 transition"
   >
     <span class="material-symbols-outlined text-[20px]">
-      analytics
+      menu
     </span>
   </button>
+
+  <!-- Dropdown menu -->
+  <div
+    id="moreMenu"
+    class="hidden absolute right-0 mt-2 w-40
+           bg-white rounded-xl shadow-lg border
+           py-2 z-50"
+  >
+    <!-- รายงาน -->
+  <button
+    onclick="openReportPage()"
+    class="flex items-center gap-3 w-full
+           px-4 py-3 text-sm font-medium text-gray-700
+           hover:bg-orange-50 hover:text-orange-600
+           transition duration-150"
+  >
+    <span class="material-symbols-outlined text-[18px]">
+      analytics
+    </span>
+    รายงาน
+  </button>
+
+  <!-- เส้นคั่น -->
+  <div class="h-px bg-gray-100 my-1"></div>
+
+  <!-- Audit Log -->
+  <button
+    onclick="openAuditLogPage()"
+    class="flex items-center gap-3 w-full
+           px-4 py-3 text-sm font-medium text-gray-700
+           hover:bg-orange-50 hover:text-orange-600
+           transition duration-150"
+  >
+    <span class="material-symbols-outlined text-[18px]">
+      history
+    </span>
+    Audit Log
+  </button>
+  </div>
+
+</div>
 
 </div>
       <div class="bg-white rounded-xl p-4 scan-zone">
@@ -162,57 +202,36 @@ hover:bg-red-100 active:scale-95 transition">
       </div>
     </section>
 <section class="px-4 mt-2">
-  
+  <div class="flex gap-2 items-center flex-wrap">
 
     <!-- queue search -->
     <input
       id="queueSearch"
       placeholder="ค้นหาเลขคิว"
-      class="border px-4 py-2 rounded-xl text-sm w-40 shadow-sm
+      class="border px-4 py-2 rounded-xl text-sm w-28 shadow-sm
              focus:ring-2 focus:ring-orange-400 focus:outline-none"
     >
 
-    <!-- search date -->
-    
-
-
-  </div>
-</section>
-<section class="px-4 mt-2">
-  <div class="mb-3 flex gap-2 items-center">
-
     <!-- date -->
     <input
-  id="dateFilter"
-  type="text"
-  placeholder="เลือกวันที่"
-  onfocus="this.type='date'"
-  onblur="if(!this.value)this.type='text'"
-  class="border px-2 py-2 rounded-lg text-xs shadow-sm w-28
-         focus:ring-2 focus:ring-orange-400 focus:outline-none"
-/>
-             
-    <!-- today -->
-    <button
-      onclick="clearDateFilter()"
-      class="border px-4 py-2 rounded-xl text-sm hover:bg-gray-50"
-    >
-      วันนี้
-    </button>
+      id="dateFilter"
+      type="text"
+      placeholder="เลือกวันที่"
+      onfocus="this.type='date'"
+      onblur="if(!this.value)this.type='text'"
+      class="border px-2 py-2 rounded-lg text-xs shadow-sm w-28
+             focus:ring-2 focus:ring-orange-400 focus:outline-none"
+    />
 
-    <!-- all -->
+    <!-- search button -->
     <button
+      type="button"
       onclick="loadWaitingParcels()"
-      class="border px-4 py-2 rounded-xl text-sm hover:bg-gray-50"
-    >
-      ทุกวัน
-    </button>
-    <button
-      onclick="applyDateFilter()"
       class="bg-orange-500 hover:bg-orange-600 transition text-white px-4 py-2 rounded-xl text-sm shadow"
     >
       ค้นหา
     </button>
+
   </div>
 </section>
     
@@ -1733,11 +1752,6 @@ function applyDateFilter() {
     });
 }
 
-function clearDateFilter(){
-  document.getElementById("dateFilter").value = ""
-  loadWaitingParcels("today")
-}
-
 
 
     function logout() {
@@ -1751,20 +1765,27 @@ function clearDateFilter(){
     async function loadWaitingParcels() {
   try {
 
-    const status = document.getElementById("statusFilter").value;
-    const queue  = document.getElementById("queueSearch").value.trim();
-    const date   = document.getElementById("dateFilter").value;
+    const status = document.getElementById("statusFilter")?.value;
+    const queue  = document.getElementById("queueSearch")?.value.trim();
+    const dateUI = document.getElementById("dateFilter")?.value;
 
     const params = new URLSearchParams();
 
-    if (status && status !== "ทั้งหมด")
+    // ===== STATUS =====
+    if (status && status !== "ทั้งหมด") {
       params.append("status", status);
+    }
 
-    if (queue)
+    // ===== QUEUE =====
+    if (queue) {
       params.append("queue", queue);
+    }
 
-    if (date)
-      params.append("date", date);
+    // ===== DATE =====
+    if (dateUI) {
+      // input type="date" จะได้ yyyy-mm-dd อยู่แล้ว
+      params.append("date", dateUI);
+    }
 
     const res = await fetch(`/api/parcels?${params.toString()}`, {
       credentials: "include"
@@ -1773,12 +1794,7 @@ function clearDateFilter(){
     if (!res.ok) throw new Error("โหลดรายการไม่สำเร็จ");
 
     const data = await res.json();
-    const box = document.getElementById("parcelList");
-
-    if (!data.length) {
-      box.innerHTML = `<div class="text-sm text-gray-400">ไม่พบพัสดุ</div>`;
-      return;
-    }
+    renderParcelList(data);
 
     // render list ตรงนี้เหมือนเดิม
 
@@ -1913,6 +1929,44 @@ document.addEventListener('click', e => {
     menu.classList.add('hidden');
   }
 });
+
+function setDefaultToday() {
+
+  // เวลาไทย +7
+  const now = new Date()
+  const thai = new Date(
+    now.toLocaleString("en-US", { timeZone: "Asia/Bangkok" })
+  )
+
+  const dd = String(thai.getDate()).padStart(2, "0")
+  const mm = String(thai.getMonth() + 1).padStart(2, "0")
+  const yyyy = thai.getFullYear()
+
+  // ✅ ต้องมี backtick
+  const todaySlash = `${dd}/${mm}/${yyyy}`
+
+  const dateInput = document.getElementById("dateFilter")
+  if (dateInput) {
+    dateInput.value = todaySlash
+  }
+
+  // โหลดพัสดุของวันนี้ทันที
+  loadWaitingParcels()
+}
+
+function toggleMoreMenu() {
+  document.getElementById("moreMenu").classList.toggle("hidden");
+}
+
+// ปิดเมนูเมื่อคลิกข้างนอก
+document.addEventListener("click", function (event) {
+  const menu = document.getElementById("moreMenu");
+  const button = event.target.closest("button");
+
+  if (!event.target.closest(".relative")) {
+    menu.classList.add("hidden");
+  }
+});
   </script>
 
   <script>
@@ -1923,6 +1977,9 @@ if(adminName){
   if(el){
     el.textContent = adminName
   }
+}
+function openAuditLogPage() {
+  window.location.href = "/audit";
 }
 </script>
 

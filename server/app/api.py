@@ -527,12 +527,23 @@ def list_parcels(
         if date and date != "all":
 
             if date == "today":
-                d = datetime.now()
+                d = thai_now()
+
             else:
+                d = None
+
+                # ลอง yyyy-mm-dd ก่อน
                 try:
                     d = datetime.strptime(date, "%Y-%m-%d")
-                except Exception:
-                    d = None
+                except ValueError:
+                    pass
+
+                # ถ้าไม่ใช่ → ลอง dd/mm/yyyy
+                if not d:
+                    try:
+                        d = datetime.strptime(date, "%d/%m/%Y")
+                    except ValueError:
+                        pass
 
             if d:
                 start = d.replace(hour=0, minute=0, second=0, microsecond=0)
@@ -543,10 +554,6 @@ def list_parcels(
                     Parcel.created_at < end
                 )
 
-        # ================= STATUS FILTER =================
-        if status and status != "ทั้งหมด":
-            q = q.filter(Parcel.status == status)
-        
         # ================= STATUS FILTER =================
         if status and status != "ทั้งหมด":
             q = q.filter(Parcel.status == status)
