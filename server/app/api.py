@@ -58,13 +58,11 @@ def write_audit(db, *, entity, entity_id, action, user, details):
     db.add(log)
 
 
-IS_PROD = os.getenv("RENDER") == "true"
-
 app.add_middleware(
     SessionMiddleware,
     secret_key=SESSION_SECRET_KEY,
-    same_site="none" if IS_PROD else "lax",
-    https_only=IS_PROD,
+    same_site="none",
+    https_only=True
 )
 
 
@@ -72,12 +70,15 @@ from fastapi.middleware.cors import CORSMiddleware
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origin_regex=r"https://.*\.onrender\.com",
+    allow_origins=[
+        "https://localhost:8000",
+        "https://127.0.0.1:8000",
+        "https://192.168.249.105:8000",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 
 # --- resolve project and static directories ---
 # file is server/app/api.py -> parents[2] => project root (ParcelSystem)
@@ -515,6 +516,7 @@ def list_parcels(
     limit: int = 500,
     status: Optional[str] = Query(None),
     date: Optional[str] = Query(None),   # "today" | "YYYY-MM-DD" | None
+    queue: Optional[str] = Query(None),
     admin = Depends(require_admin)
 ):
     db = SessionLocal()
@@ -544,6 +546,14 @@ def list_parcels(
         # ================= STATUS FILTER =================
         if status and status != "ทั้งหมด":
             q = q.filter(Parcel.status == status)
+        
+        # ================= STATUS FILTER =================
+        if status and status != "ทั้งหมด":
+            q = q.filter(Parcel.status == status)
+
+        # ================= QUEUE FILTER =================
+        if queue:
+            q = q.filter(Parcel.queue_number.ilike(f"%{queue}%"))
 
         rows = (
             q.order_by(Parcel.created_at.asc())

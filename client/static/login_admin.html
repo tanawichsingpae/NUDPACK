@@ -58,9 +58,45 @@ background-position: 0 0, 10px 10px;
 placeholder="ชื่อเจ้าหน้าที่"
 class="w-full py-3 px-4 rounded-lg border bg-[#fcfaf8]">
 
-<input id="adminPass" type="password"
-placeholder="รหัสเข้าสู่ระบบ"
-class="w-full py-3 px-4 rounded-lg border bg-[#fcfaf8]">
+<div class="relative">
+  <input id="adminPass" type="password"
+    placeholder="รหัสเข้าสู่ระบบ"
+    class="w-full py-3 px-4 pr-12 rounded-lg border bg-[#fcfaf8]">
+
+  <button type="button"
+    onclick="togglePassword()"
+    class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500">
+
+    <!-- eye icon -->
+    <svg id="eyeOpen" xmlns="http://www.w3.org/2000/svg"
+      class="h-5 w-5" fill="none"
+      viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+        d="M2.458 12C3.732 7.943 7.523 5 12 5
+           c4.477 0 8.268 2.943 9.542 7
+           -1.274 4.057-5.065 7-9.542 7
+           -4.477 0-8.268-2.943-9.542-7z" />
+    </svg>
+
+    <!-- eye slash -->
+    <svg id="eyeClose" xmlns="http://www.w3.org/2000/svg"
+      class="h-5 w-5 hidden" fill="none"
+      viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+        d="M13.875 18.825A10.05 10.05 0 0112 19
+           c-4.477 0-8.268-2.943-9.542-7
+           a9.956 9.956 0 012.293-3.95M6.53 6.53
+           A9.953 9.953 0 0112 5
+           c4.477 0 8.268 2.943 9.542 7
+           a9.953 9.953 0 01-4.132 5.411M15 12
+           a3 3 0 00-3-3m0 0
+           a3 3 0 00-3 3m3-3v3m0 0h3m-3 0H9m11 11L4 4" />
+    </svg>
+
+  </button>
+</div>
 
 <button onclick="loginAdmin()"
 class="w-full bg-primary text-white font-bold py-4 rounded-lg">
@@ -139,6 +175,21 @@ function showAlert(msg){
 function closeAdminAlert(){
   adminAlert.classList.add("hidden")
   adminAlert.classList.remove("flex")
+}
+function togglePassword(){
+  const passInput = document.getElementById("adminPass")
+  const eyeOpen = document.getElementById("eyeOpen")
+  const eyeClose = document.getElementById("eyeClose")
+
+  if(passInput.type === "password"){
+    passInput.type = "text"
+    eyeOpen.classList.add("hidden")
+    eyeClose.classList.remove("hidden")
+  }else{
+    passInput.type = "password"
+    eyeOpen.classList.remove("hidden")
+    eyeClose.classList.add("hidden")
+  }
 }
 </script>
 

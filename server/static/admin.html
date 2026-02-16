@@ -1748,26 +1748,40 @@ function clearDateFilter(){
   })
 }
 
-    async function loadWaitingParcels(date=null){
-      try {
-        const status = document.getElementById("statusFilter").value || "ทั้งหมด"
+    async function loadWaitingParcels() {
+  try {
 
-        let url = `/api/parcels?status=${encodeURIComponent(status)}`
+    const status = document.getElementById("statusFilter").value;
+    const queue  = document.getElementById("queueSearch").value.trim();
+    const date   = document.getElementById("dateFilter").value;
 
-if(date){
-  url += `&date=${encodeURIComponent(date)}`
-}
-        const res = await fetch(url, {credentials: "include"})
+    const params = new URLSearchParams();
 
-        if (!res.ok) throw new Error("โหลดรายการไม่สำเร็จ")
+    if (status && status !== "ทั้งหมด")
+      params.append("status", status);
 
-        const data = await res.json()
-        const box = document.getElementById("parcelList")
+    if (queue)
+      params.append("queue", queue);
 
-        if (!data.length) {
-          box.innerHTML = `<div class="text-sm text-gray-400">ไม่พบพัสดุ</div>`
-          return
-        }
+    if (date)
+      params.append("date", date);
+
+    const res = await fetch(`/api/parcels?${params.toString()}`, {
+      credentials: "include"
+    });
+
+    if (!res.ok) throw new Error("โหลดรายการไม่สำเร็จ");
+
+    const data = await res.json();
+    const box = document.getElementById("parcelList");
+
+    if (!data.length) {
+      box.innerHTML = `<div class="text-sm text-gray-400">ไม่พบพัสดุ</div>`;
+      return;
+    }
+
+    // render list ตรงนี้เหมือนเดิม
+
 
         box.innerHTML = data.map(p => `
 <div onclick="handleScan('${p.tracking_number}')"
@@ -1800,12 +1814,11 @@ ${new Date(p.created_at).toLocaleString("th-TH", { timeZone: "Asia/Bangkok" })}
 </div>
 `).join("")
 
-      } catch (e) {
-        document.getElementById("parcelList").innerHTML =
-          `<div class="text-red-400 text-sm">โหลดข้อมูลไม่ได้</div>`
-        console.error(e)
-      }
-    }
+
+  } catch (err) {
+    console.error(err);
+  }
+}
     function renderParcelList(items){
 
   const box = document.getElementById("parcelList")
