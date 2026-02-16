@@ -94,35 +94,84 @@ hover:bg-red-100 active:scale-95 transition">
     <main class="flex-1 max-w-xl mx-auto w-full pb-40">
 
         <section class="p-4 mt-4">
-            <div class="bg-white rounded-xl p-4 scan-zone">
+  <div class="bg-white rounded-xl p-4 scan-zone shadow-sm">
 
-                <label class="text-sm font-semibold text-orange-400">กรอกเลขพัสดุ</label>
+    <!-- 🔹 จำนวนพัสดุ -->
+    <label class="text-sm font-semibold text-orange-400">
+      กรอกจำนวนพัสดุ
+    </label>
 
-                <div class="flex mt-2">
-                    <input id="scanInput" class="flex-1 border rounded-l-lg h-12 px-3" placeholder="Enter tracking" />
+    <div class="flex items-center gap-2 mt-2">
+      <input 
+        id="parcelAmount"
+        type="number"
+        min="1"
+        class="flex-1 border rounded-lg h-12 w-10 focus:outline-none focus:ring-2 focus:ring-primary/50"
+        placeholder="เช่น 50" 
+      />
+      <button 
+        onclick="reserveQueue()"
+        class="bg-primary text-white px-4 h-12 rounded-lg">
+        เริ่มงาน
+      </button>
+    </div>
 
-                    <button onclick="handleScan(scanInput.value.trim())"
-                        class="bg-primary text-white px-4 rounded-r-lg">
-                        <span class="material-symbols-outlined text-xl">search</span>
-                    </button>
-                </div>
+    <!-- แสดงช่วงคิว -->
+    <div id="queueRangeInfo" class="text-sm text-green-600 mt-2 hidden"></div>
+    <button id="clearQueueBtn"
+    onclick="clearActiveQueue()"
+    class="mt-3 w-full bg-red-500 text-white py-2 rounded-xl text-sm hidden">
+    ล้างคิวที่กำลังใช้งาน
+    </button>
+    <div class="border-t my-5"></div>
 
-                <div class="flex gap-3 mt-4">
-                    <button onclick="startCamera()"
-                        class="flex-1 bg-primary text-white rounded-lg h-12 flex justify-center items-center gap-2">
-                        <span class="material-symbols-outlined">photo_camera</span>เปิดกล้อง
-                    </button>
+    <!-- 🔒 กรอกเลขพัสดุ -->
+    <label class="text-sm font-semibold text-orange-400">
+      กรอกเลขพัสดุ
+    </label>
 
-                    <button onclick="stopCamera()"
-                        class="flex-1 border rounded-lg h-12 flex justify-center items-center gap-2">
-                        <span class="material-symbols-outlined">videocam_off</span>ปิดกล้อง
-                    </button>
-                </div>
+    <div class="flex mt-2">
+      <input 
+        id="scanInput"
+        disabled
+        class="flex-1 border rounded-l-lg h-12 px-3 bg-gray-100"
+        placeholder="กรุณากรอกเลขพัสดุ" 
+      />
 
-                <div id="messages" class="text-sm mt-2"></div>
+      <button 
+        id="scanBtn"
+        disabled
+        onclick="handleScan(scanInput.value.trim())"
+        class="bg-gray-400 text-white px-4 rounded-r-lg flex items-center">
+        <span class="material-symbols-outlined text-xl">search</span>
+      </button>
+    </div>
 
-            </div>
-        </section>
+    <!-- 🔒 ปุ่มกล้อง -->
+    <div class="flex gap-3 mt-4">
+      <button 
+        id="cameraOnBtn"
+        disabled
+        onclick="startCamera()"
+        class="flex-1 bg-gray-400 text-white rounded-lg h-12 flex justify-center items-center gap-2">
+        <span class="material-symbols-outlined">photo_camera</span>
+        เปิดกล้อง
+      </button>
+
+      <button 
+        id="cameraOffBtn"
+        disabled
+        onclick="stopCamera()"
+        class="flex-1 bg-gray-300 text-gray-500 rounded-lg h-12 flex justify-center items-center gap-2">
+        <span class="material-symbols-outlined">videocam_off</span>
+        ปิดกล้อง
+      </button>
+    </div>
+
+    <div id="messages" class="text-sm mt-3"></div>
+
+  </div>
+</section>
 
         <section class="px-4 mt-6">
 
@@ -171,6 +220,27 @@ hover:bg-red-100 active:scale-95 transition">
 
         </div>
     </div>
+    <!-- Queueหมด Popup -->
+<div id="queueหมดPopup" class="fixed inset-0 bg-black/40 hidden items-center justify-center z-50">
+  <div class="bg-white rounded-2xl p-8 w-80 text-center shadow-xl">
+    <div class="text-5xl mb-3 text-red-500">
+      <span class="material-symbols-outlined text-5xl">error</span>
+    </div>
+
+    <p class="text-lg font-bold text-gray-700 mb-2">
+      คิวหมดแล้ว
+    </p>
+
+    <p class="text-sm text-gray-500 mb-6">
+      กรุณาจองคิวใหม่
+    </p>
+
+    <button onclick="refreshAfterQueueEnd()"
+      class="w-full bg-primary text-white py-3 rounded-xl font-bold">
+      ตกลง
+    </button>
+  </div>
+</div>
     <div id="cameraOverlay"
   class="fixed inset-0 bg-black/70 hidden z-50 flex items-center justify-center">
 
@@ -282,35 +352,45 @@ function stopCamera() {
 }
 
         async function handleScan(tracking) {
-            if (!tracking || busy) return
-            busy = true
+  if (!tracking || busy) return
+  busy = true
 
-            if (preview.find(p => p.tracking === tracking)) {
-                flash("พัสดุนี้ถูกสแกนแล้ว", false); beep(false); busy = false; return
-            }
+  if (preview.find(p => p.tracking === tracking)) {
+    flash("พัสดุนี้ถูกสแกนแล้ว", false)
+    beep(false)
+    busy = false
+    return
+  }
 
-            try {
-                const r = await fetch(`${SERVER}/api/parcels`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        tracking_number: tracking,
-                        provisional: true
-                    })
-                })
+  // 🔥 ดึงเลขคิวจากช่วงที่จองไว้
+  const queue = getNextQueue()
+  if (!queue) {
+    busy = false
+    return
+  }
 
-                if (r.status === 409) {
-                    const d = await fetch(`${SERVER}/api/parcels/${tracking}`).then(r => r.json())
-                    addPreview(d.tracking_number, d.queue_number, d.status)
-                } else {
-                    const j = await r.json()
-                    addPreview(tracking, j.queue_number, "กำลังรอ")
-                }
+  try {
+    const r = await fetch(`${SERVER}/api/parcels`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        tracking_number: tracking,
+        queue_number: queue.toString(),// 🔥 ส่งเลขคิวไป
+        provisional: true
+      })
+    })
 
-                beep()
-            } catch (e) { flash(e.message, false) }
-            busy = false
-        }
+    if (!r.ok) throw new Error()
+
+    addPreview(tracking, queue, "กำลังรอ")
+    beep()
+
+  } catch (e) {
+    flash("เกิดข้อผิดพลาด", false)
+  }
+
+  busy = false
+}
 
         function addPreview(t, q, s) {
             preview.unshift({ tracking: t, queue: q, status: s, created_at: new Date().toISOString() })
@@ -386,6 +466,7 @@ ${new Date(p.created_at).toLocaleString("th-TH", { timeZone: "Asia/Bangkok" })}
         }
 
         render()
+        restoreQueueState()
         const queuePopup = document.getElementById("queuePopup")
         const popupQueue = document.getElementById("popupQueue")
         const popupTracking = document.getElementById("popupTracking")
@@ -415,6 +496,183 @@ ${new Date(p.created_at).toLocaleString("th-TH", { timeZone: "Asia/Bangkok" })}
         staffLabel.innerText = localStorage.getItem("staff_name") || "-"
         carrierLabel.innerText = localStorage.getItem("carrier_name") || "-"
 
+        function confirmParcelAmount() {
+  const amount = document.getElementById("parcelAmount").value;
+
+  if (!amount || amount <= 0) {
+    alert("กรุณากรอกจำนวนพัสดุให้ถูกต้อง");
+    return;
+  }
+
+  alert("ตั้งค่าจำนวนพัสดุเรียบร้อย: " + amount);
+}
+
+async function reserveQueue() {
+  const amount = parseInt(document.getElementById("parcelAmount").value);
+
+  if (!amount || amount <= 0) {
+    alert("กรุณากรอกจำนวนพัสดุให้ถูกต้อง");
+    return;
+  }
+
+  try {
+    const res = await fetch(`/api/queue/reserve?amount=${amount}`, {
+      method: "POST"
+    });
+
+    if (!res.ok) throw new Error();
+
+    const data = await res.json();
+
+    localStorage.setItem("range_start", data.start);
+    localStorage.setItem("range_end", data.end);
+    localStorage.setItem("current_seq", data.start);
+
+    // แสดงช่วงคิว
+    const info = document.getElementById("queueRangeInfo");
+    info.innerText = `จองคิวสำเร็จ: ${data.start} - ${data.end}`;
+    info.classList.remove("hidden");
+    document.getElementById("clearQueueBtn").classList.remove("hidden");
+
+    // 🔓 ปลดล็อก scan
+    document.getElementById("scanInput").disabled = false;
+    document.getElementById("scanInput").classList.remove("bg-gray-100");
+
+    document.getElementById("scanBtn").disabled = false;
+    document.getElementById("scanBtn").classList.remove("bg-gray-400");
+    document.getElementById("scanBtn").classList.add("bg-primary");
+
+    // 🔓 ปลดล็อกกล้อง
+    const camOn = document.getElementById("cameraOnBtn");
+    const camOff = document.getElementById("cameraOffBtn");
+
+    camOn.disabled = false;
+    camOn.classList.remove("bg-gray-400");
+    camOn.classList.add("bg-primary");
+
+    camOff.disabled = false;
+    camOff.classList.remove("bg-gray-300", "text-gray-500");
+    camOff.classList.add("border");
+
+    // 🔒 ล็อกช่องจำนวน
+    document.getElementById("parcelAmount").disabled = true;
+
+  } catch {
+    alert("เกิดข้อผิดพลาดในการจองคิว");
+  }
+}
+function getNextQueue() {
+  let current = parseInt(localStorage.getItem("current_seq"));
+  let end = parseInt(localStorage.getItem("range_end"));
+
+  if (!current || current > end) {
+  showQueueEndPopup();
+  return null;
+}
+
+  localStorage.setItem("current_seq", current + 1);
+  return current;
+}
+function restoreQueueState() {
+  const start = parseInt(localStorage.getItem("range_start"));
+  const end = parseInt(localStorage.getItem("range_end"));
+  const current = parseInt(localStorage.getItem("current_seq"));
+
+  if (!start || !end || !current) return;
+
+  if (current > end) {
+    // คิวหมดแล้ว
+    localStorage.removeItem("range_start");
+    localStorage.removeItem("range_end");
+    localStorage.removeItem("current_seq");
+    return;
+  }
+
+  // แสดงช่วงคิว
+  const info = document.getElementById("queueRangeInfo");
+  info.innerText = `กำลังใช้งานคิว: ${start} - ${end}`;
+  info.classList.remove("hidden");
+  document.getElementById("clearQueueBtn").classList.remove("hidden");
+
+  // 🔒 ล็อกช่องจำนวน
+  document.getElementById("parcelAmount").disabled = true;
+
+  // 🔓 เปิด scan
+  document.getElementById("scanInput").disabled = false;
+  document.getElementById("scanInput").classList.remove("bg-gray-100");
+
+  document.getElementById("scanBtn").disabled = false;
+  document.getElementById("scanBtn").classList.remove("bg-gray-400");
+  document.getElementById("scanBtn").classList.add("bg-primary");
+
+  // 🔓 เปิดกล้อง
+  const camOn = document.getElementById("cameraOnBtn");
+  const camOff = document.getElementById("cameraOffBtn");
+
+  camOn.disabled = false;
+  camOn.classList.remove("bg-gray-400");
+  camOn.classList.add("bg-primary");
+
+  camOff.disabled = false;
+  camOff.classList.remove("bg-gray-300", "text-gray-500");
+  camOff.classList.add("border");
+}
+const queueหมดPopup = document.getElementById("queueหมดPopup")
+
+function showQueueEndPopup() {
+  queueหมดPopup.classList.remove("hidden")
+  queueหมดPopup.classList.add("flex")
+}
+
+function refreshAfterQueueEnd() {
+  localStorage.removeItem("range_start")
+  localStorage.removeItem("range_end")
+  localStorage.removeItem("current_seq")
+  location.reload()
+}
+function clearActiveQueue() {
+  const confirmClear = confirm("คุณต้องการล้างคิวที่กำลังใช้งานใช่หรือไม่?");
+
+  if (!confirmClear) return;
+
+  // ลบข้อมูลคิว
+  localStorage.removeItem("range_start");
+  localStorage.removeItem("range_end");
+  localStorage.removeItem("current_seq");
+
+  // รีเซ็ต UI
+  document.getElementById("queueRangeInfo").classList.add("hidden");
+
+  document.getElementById("parcelAmount").disabled = false;
+
+  // 🔒 ปิด scan
+  const scanInput = document.getElementById("scanInput");
+  const scanBtn = document.getElementById("scanBtn");
+
+  scanInput.disabled = true;
+  scanInput.classList.add("bg-gray-100");
+
+  scanBtn.disabled = true;
+  scanBtn.classList.remove("bg-primary");
+  scanBtn.classList.add("bg-gray-400");
+
+  // 🔒 ปิดกล้อง
+  const camOn = document.getElementById("cameraOnBtn");
+  const camOff = document.getElementById("cameraOffBtn");
+
+  camOn.disabled = true;
+  camOn.classList.remove("bg-primary");
+  camOn.classList.add("bg-gray-400");
+
+  camOff.disabled = true;
+  camOff.classList.remove("border");
+  camOff.classList.add("bg-gray-300", "text-gray-500");
+
+  // ซ่อนปุ่มล้างคิว
+  document.getElementById("clearQueueBtn").classList.add("hidden");
+
+  alert("ล้างคิวเรียบร้อยแล้ว");
+}
     </script>
     <!-- Queue Popup -->
 

@@ -6,7 +6,7 @@ from fastapi.responses import RedirectResponse,FileResponse, JSONResponse
 from pydantic import BaseModel
 from .db import SessionLocal, init_db
 from .models import Parcel, DailyCounter, AuditLog, RecycledQueue,CarrierList
-from .utils import next_queue_number_atomic
+
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import or_, and_
 import io, csv
@@ -261,6 +261,7 @@ def login(payload: LoginIn, request: Request):
 # Pydantic input model
 class ParcelIn(BaseModel):
     tracking_number: str
+    queue_number: str
     carrier_staff_name: Optional[str] = None
     recipient_name: Optional[str] = None
     admin_staff_name: Optional[str] = None
@@ -278,6 +279,8 @@ class BulkDeleteIn(BaseModel):
 # ---------------------------
 # Create parcel (check-in / provisional)
 # ---------------------------
+from sqlalchemy import cast, Integer
+
 @app.post("/api/parcels")
 def create_parcel(p: ParcelIn, request: Request):
     db = SessionLocal()
@@ -289,67 +292,98 @@ def create_parcel(p: ParcelIn, request: Request):
             raise HTTPException(401, "not logged in")
 
         if not p.tracking_number:
-            raise HTTPException(status_code=400, detail="missing tracking_number")
+            raise HTTPException(400, "missing tracking_number")
 
         carrier = db.query(CarrierList).filter(
             CarrierList.carrier_id == carrier_id
         ).first()
 
-
         if not carrier:
             raise HTTPException(400, "invalid carrier")
 
+        # ตรวจ duplicate tracking
+        existing = db.query(Parcel).filter(
+            Parcel.tracking_number == p.tracking_number
+        ).first()
 
-        # Quick duplicate check
-        existing = db.query(Parcel).filter(Parcel.tracking_number == p.tracking_number).first()
         if existing:
-            # Already exists in DB
-            raise HTTPException(status_code=409, detail="tracking_number already exists")
+            raise HTTPException(409, "tracking_number already exists")
 
-        # Generate queue atomically (counter separated by carrier)
-        try:
-            # prefix kept as 'NUD' per requirement; change to prefix=carrier if desired
-            queue = next_queue_number_atomic()
-        except Exception as e:
-            # fail early
-            raise HTTPException(status_code=500, detail=f"counter error: {e}")
+        today = thai_now().strftime("%Y%m%d")
+
+        # ==========================================
+        # 🔥 1️⃣ ใช้ RecycledQueue ก่อนเสมอ
+        # ==========================================
+
+        recycled = (
+            db.query(RecycledQueue)
+            .filter(
+                RecycledQueue.carrier_id == carrier_id,
+                RecycledQueue.date == today
+            )
+            .order_by(cast(RecycledQueue.queue_number, Integer).asc())
+            .with_for_update()
+            .first()
+        )
+
+        if recycled:
+            queue_number = recycled.queue_number
+            db.delete(recycled)
+
+        else:
+            # ==========================================
+            # 🔥 2️⃣ ใช้ QueueReservation
+            # ==========================================
+
+            reservation = (
+                db.query(QueueReservation)
+                .filter(
+                    QueueReservation.carrier_id == carrier_id,
+                    QueueReservation.date == today
+                )
+                .order_by(QueueReservation.id.desc())
+                .with_for_update()
+                .first()
+            )
+
+            if not reservation:
+                raise HTTPException(400, "ยังไม่ได้จองคิว")
+
+            if reservation.current_seq > reservation.end_seq:
+                reservation.status = "completed"
+                db.commit()
+                raise HTTPException(400, "คิวหมดแล้ว")
+
+            queue_number = str(reservation.current_seq)
+            reservation.current_seq += 1
+
+            if reservation.current_seq > reservation.end_seq:
+                reservation.status = "completed"
+
+        # ==========================================
 
         status = "กำลังรอ" if p.provisional else "ยังไม่ได้รับ"
 
         parcel = Parcel(
             tracking_number=p.tracking_number,
-            carrier_id=carrier.carrier_id,
+            carrier_id=carrier_id,
             carrier_staff_name=carrier_staff,
-            queue_number=queue,
+            queue_number=queue_number,
             recipient_name=p.recipient_name,
             admin_staff_name=p.admin_staff_name,
             status=status
         )
+
         db.add(parcel)
-        try:
-            db.commit()
-            db.refresh(parcel)
-        except IntegrityError:
-            db.rollback()
-            # Unique constraint prevented duplicate from race
-            raise HTTPException(status_code=409, detail="tracking_number already exists (race)")
+        db.commit()
+        db.refresh(parcel)
 
-        # Audit log (best-effort)
-        try:
-            write_audit(
-                db,
-                entity="พัสดุ",
-                entity_id=parcel.id,
-                action="เพิ่มหมายเลขพัสดุ",
-                user=f"พนักงานขนส่ง {carrier.carrier_name}: {carrier_staff}",
-                details=f"หมายเลขพัสดุ: {parcel.tracking_number}"
-            )
-            db.commit()
-            db.refresh(parcel)
-        except Exception:
-            db.rollback()  # don't fail creation if audit fails
+        return {
+            "id": parcel.id,
+            "queue_number": parcel.queue_number,
+            "status": parcel.status
+        }
 
-        return {"id": parcel.id, "queue_number": parcel.queue_number, "status": parcel.status}
     finally:
         db.close()
 
@@ -1121,26 +1155,29 @@ def bulk_delete_parcels(
 def delete_parcel(tracking: str):
     db = SessionLocal()
     try:
-        p = db.query(Parcel).filter(Parcel.tracking_number == tracking).first()
+        p = db.query(Parcel).filter(
+            Parcel.tracking_number == tracking
+        ).first()
+
         if not p:
-            raise HTTPException(status_code=404, detail="parcel not found")
+            raise HTTPException(404, "parcel not found")
 
         if p.status != "กำลังรอ":
             raise HTTPException(
-                status_code=400,
-                detail="cannot delete parcel that is not PENDING"
+                400,
+                "cannot delete parcel that is not PENDING"
             )
 
-        # ✅ คืนคิว
+        # 🔥 ใช้วันปัจจุบัน ไม่ใช้ created_at
+        today = thai_now().strftime("%Y%m%d")
+
         rq = RecycledQueue(
             carrier_id=p.carrier_id,
-            date=p.created_at.strftime("%Y%m%d"),
+            date=today,
             queue_number=p.queue_number
         )
 
-
         db.add(rq)
-
         db.delete(p)
         db.commit()
 
@@ -1240,4 +1277,71 @@ def list_audit_logs(
         }
         for l in logs
     ]
+from .models import QueueReservation
+
+@app.post("/api/queue/reserve")
+def reserve_queue_range(
+    amount: int,
+    request: Request
+):
+    db = SessionLocal()
+    try:
+        carrier_id = request.session.get("carrier_id")
+
+        if not carrier_id:
+            raise HTTPException(401, "not logged in")
+
+        if amount <= 0:
+            raise HTTPException(400, "amount must be > 0")
+
+        today = thai_now().strftime("%Y%m%d")
+
+        # 🔒 lock counter กันชนกัน
+        counter = (
+            db.query(DailyCounter)
+            .filter(
+                DailyCounter.carrier_id == carrier_id,
+                DailyCounter.date == today
+            )
+            .with_for_update()
+            .first()
+        )
+
+        if not counter:
+            counter = DailyCounter(
+                carrier_id=carrier_id,
+                date=today,
+                last_seq=0
+            )
+            db.add(counter)
+            db.flush()
+
+        start = counter.last_seq + 1
+        end = counter.last_seq + amount
+
+        counter.last_seq = end
+
+        # ✅ บันทึก QueueReservation
+        reservation = QueueReservation(
+            carrier_id=carrier_id,
+            date=today,
+            start_seq=start,
+            end_seq=end,
+            current_seq=start,
+            status="active"
+        )
+
+        db.add(reservation)
+        db.commit()
+
+        return {
+            "carrier_id": carrier_id,
+            "date": today,
+            "start": start,
+            "end": end,
+            "total": amount
+        }
+
+    finally:
+        db.close()
 # EOF

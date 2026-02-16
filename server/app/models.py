@@ -1,5 +1,5 @@
 # server/app/models.py
-from sqlalchemy import Column, Integer, String, DateTime, Text, Boolean, ForeignKey, text
+from sqlalchemy import Column, Integer, String, DateTime, Text, Boolean, ForeignKey, text,UniqueConstraint
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from .db import Base
@@ -29,12 +29,16 @@ class Parcel(Base):
 # ตัวนับรายวัน (DailyCounter) — ใช้เก็บเลขลำดับต่อวันแยกตาม carrier
 class DailyCounter(Base):
     __tablename__ = "daily_counters"
+    __table_args__ = (
+        UniqueConstraint('carrier_id', 'date', name='uix_carrier_date'),
+    )
+
     id = Column(Integer, primary_key=True, autoincrement=True)
 
     carrier_id = Column(Integer, ForeignKey("carrier_list.carrier_id"), index=True)
     carrier = relationship("CarrierList")
 
-    date = Column(String, index=True, nullable=False)  # YYYYMMDD
+    date = Column(String, index=True, nullable=False)
 
     created_at = Column(DateTime(timezone=True), default=thai_now)
     last_seq = Column(Integer, nullable=False, default=0)
@@ -72,3 +76,20 @@ class CarrierList(Base):
 
     parcels = relationship("Parcel", backref="carrier_obj")
 
+class QueueReservation(Base):
+    __tablename__ = "queue_reservations"
+
+    id = Column(Integer, primary_key=True)
+
+    carrier_id = Column(Integer, ForeignKey("carrier_list.carrier_id"), index=True)
+    carrier = relationship("CarrierList")
+
+    date = Column(String, index=True, nullable=False)
+
+    start_seq = Column(Integer, nullable=False)
+    end_seq = Column(Integer, nullable=False)
+
+    current_seq = Column(Integer, nullable=False)   # 👈 เพิ่ม
+    status = Column(String, default="active") 
+
+    created_at = Column(DateTime(timezone=True), default=thai_now)

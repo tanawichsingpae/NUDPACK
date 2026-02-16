@@ -1,56 +1,52 @@
 from datetime import date
-from .models import DailyCounter, RecycledQueue
+from .models import DailyCounter, RecycledQueue,QueueReservation
 from .db import SessionLocal
 
 
 def format_queue(seq: int) -> str:
     return f"{seq}"
 
-
-def next_queue_number_atomic(today: date | None = None):
-    if today is None:
-        today = date.today()
-
+def reserve_queue_range(carrier_id: int, amount: int):
+    today = date.today()
     datestr = today.strftime("%Y%m%d")
 
     db = SessionLocal()
     try:
         with db.begin():
 
-            # ✅ 1) ใช้คิวที่ถูกคืนก่อน (ไม่สน carrier)
-            recycled = (
-                db.query(RecycledQueue)
-                .filter(RecycledQueue.date == datestr)
-                .order_by(RecycledQueue.queue_number.asc())
-                .with_for_update()
-                .first()
-            )
-
-            if recycled:
-                queue = recycled.queue_number
-                db.delete(recycled)
-                return queue
-
-            # ✅ 2) counter รายวัน (เดียวทั้งระบบ)
             counter = (
                 db.query(DailyCounter)
-                .filter(DailyCounter.date == datestr)
+                .filter(
+                    DailyCounter.carrier_id == carrier_id,
+                    DailyCounter.date == datestr
+                )
                 .with_for_update()
                 .one_or_none()
             )
 
             if counter is None:
                 counter = DailyCounter(
+                    carrier_id=carrier_id,
                     date=datestr,
-                    last_seq=1
+                    last_seq=0
                 )
                 db.add(counter)
-                seq = 1
-            else:
-                counter.last_seq += 1
-                seq = counter.last_seq
+                db.flush()
 
-        return format_queue(seq)
+            start_seq = counter.last_seq + 1
+            end_seq = counter.last_seq + amount
+
+            counter.last_seq = end_seq
+
+            reservation = QueueReservation(
+                carrier_id=carrier_id,
+                date=datestr,
+                start_seq=start_seq,
+                end_seq=end_seq
+            )
+            db.add(reservation)
+
+        return start_seq, end_seq
 
     finally:
         db.close()
