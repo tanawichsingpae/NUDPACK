@@ -341,7 +341,7 @@ def create_parcel(p: ParcelIn, request: Request):
                 entity="พัสดุ",
                 entity_id=parcel.id,
                 action="เพิ่มหมายเลขพัสดุ",
-                user=f"พนักงานขนส่ง: {carrier_staff}",
+                user=f"พนักงานขนส่ง {carrier.carrier_name}: {carrier_staff}",
                 details=f"หมายเลขพัสดุ: {parcel.tracking_number}"
             )
             db.commit()
@@ -361,11 +361,19 @@ def confirm_pending(tracking: str, request: Request):
     db = SessionLocal()
     try:
         carrier_staff = request.session.get("carrier_staff_name")
+        
         p = db.query(Parcel).filter(Parcel.tracking_number == tracking).first()
         if not p:
             raise HTTPException(status_code=404, detail="parcel not found")
         if p.status != "กำลังรอ":
             return {"ok": False, "message": "parcel not pending"}
+        
+        carrier = db.query(CarrierList).filter(
+            CarrierList.carrier_id == p.carrier_id
+        ).first()
+
+        carrier_name = carrier.carrier_name if carrier else "Unknown"
+        
         p.status = "ยังไม่ได้รับ"
         db.add(p)
         db.commit()
@@ -376,7 +384,7 @@ def confirm_pending(tracking: str, request: Request):
             entity="พัสดุ", 
             entity_id=p.id, 
             action="ยืนยันการเพิ่มหมายเลขพัสดุ", 
-            user=f"พนักงานขนส่ง: {carrier_staff}",
+            user=f"พนักงานขนส่ง {carrier_name}: {carrier_staff}",
             details=f"หมายเลขพัสดุ: {p.tracking_number}"
         )
         db.commit()
