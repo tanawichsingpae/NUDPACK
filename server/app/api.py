@@ -1299,17 +1299,13 @@ def reserve_queue_range(
         # 🔒 lock counter กันชนกัน
         counter = (
             db.query(DailyCounter)
-            .filter(
-                DailyCounter.carrier_id == carrier_id,
-                DailyCounter.date == today
-            )
+            .filter(DailyCounter.date == today)
             .with_for_update()
             .first()
         )
 
         if not counter:
             counter = DailyCounter(
-                carrier_id=carrier_id,
                 date=today,
                 last_seq=0
             )
@@ -1320,6 +1316,7 @@ def reserve_queue_range(
         end = counter.last_seq + amount
 
         counter.last_seq = end
+
 
         # ✅ บันทึก QueueReservation
         reservation = QueueReservation(

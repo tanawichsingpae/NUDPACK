@@ -109,11 +109,9 @@ hover:bg-red-100 active:scale-95 transition">
         class="flex-1 border rounded-lg h-12 w-10 focus:outline-none focus:ring-2 focus:ring-primary/50"
         placeholder="เช่น 50" 
       />
-      <button 
-        onclick="reserveQueue()"
-        class="bg-primary text-white px-4 h-12 rounded-lg">
-        เริ่มงาน
-      </button>
+      <button id="startBtn" onclick="reserveQueue()"class="bg-primary text-white px-4 h-12 rounded-lg">
+  เริ่มงาน
+</button>
     </div>
 
     <!-- แสดงช่วงคิว -->
@@ -303,6 +301,8 @@ hover:bg-red-100 active:scale-95 transition">
         const messages = document.getElementById("messages")
 
         let preview = JSON.parse(localStorage.getItem("preview") || "[]")
+        let reserveLocked = false
+
 
         preview = preview.map(p => ({
             ...p,
@@ -541,59 +541,57 @@ ${new Date(p.created_at).toLocaleString("th-TH", { timeZone: "Asia/Bangkok" })}
 }
 
 async function reserveQueue() {
-  const amount = parseInt(document.getElementById("parcelAmount").value);
+
+  if (reserveLocked) return
+
+  const startBtn = document.getElementById("startBtn")
+  reserveLocked = true
+  startBtn.disabled = true
+  startBtn.innerText = "กำลังจอง..."
+
+  const amount = parseInt(document.getElementById("parcelAmount").value)
 
   if (!amount || amount <= 0) {
-    alert("กรุณากรอกจำนวนพัสดุให้ถูกต้อง");
-    return;
+    alert("กรุณากรอกจำนวนพัสดุให้ถูกต้อง")
+    reserveLocked = false
+    startBtn.disabled = false
+    startBtn.innerText = "เริ่มงาน"
+    return
   }
 
   try {
     const res = await fetch(`/api/queue/reserve?amount=${amount}`, {
       method: "POST"
-    });
+    })
 
-    if (!res.ok) throw new Error();
+    if (!res.ok) throw new Error()
 
-    const data = await res.json();
+    const data = await res.json()
 
-    localStorage.setItem("range_start", data.start);
-    localStorage.setItem("range_end", data.end);
-    localStorage.setItem("current_seq", data.start);
+    localStorage.setItem("range_start", data.start)
+    localStorage.setItem("range_end", data.end)
+    localStorage.setItem("current_seq", data.start)
 
-    // แสดงช่วงคิว
-    const info = document.getElementById("queueRangeInfo");
-    info.innerText = `จองคิวสำเร็จ: ${data.start} - ${data.end}`;
-    info.classList.remove("hidden");
-    document.getElementById("clearQueueBtn").classList.remove("hidden");
+    const info = document.getElementById("queueRangeInfo")
+    info.innerText = `จองคิวสำเร็จ: ${data.start} - ${data.end}`
+    info.classList.remove("hidden")
+    document.getElementById("clearQueueBtn").classList.remove("hidden")
 
-    // 🔓 ปลดล็อก scan
-    document.getElementById("scanInput").disabled = false;
-    document.getElementById("scanInput").classList.remove("bg-gray-100");
+    document.getElementById("parcelAmount").disabled = true
 
-    document.getElementById("scanBtn").disabled = false;
-    document.getElementById("scanBtn").classList.remove("bg-gray-400");
-    document.getElementById("scanBtn").classList.add("bg-primary");
+    // 🔓 เปิดระบบสแกน
+    restoreQueueState()
 
-    // 🔓 ปลดล็อกกล้อง
-    const camOn = document.getElementById("cameraOnBtn");
-    const camOff = document.getElementById("cameraOffBtn");
+    startBtn.innerText = "เริ่มงานแล้ว"
 
-    camOn.disabled = false;
-    camOn.classList.remove("bg-gray-400");
-    camOn.classList.add("bg-primary");
-
-    camOff.disabled = false;
-    camOff.classList.remove("bg-gray-300", "text-gray-500");
-    camOff.classList.add("border");
-
-    // 🔒 ล็อกช่องจำนวน
-    document.getElementById("parcelAmount").disabled = true;
-
-  } catch {
-    alert("เกิดข้อผิดพลาดในการจองคิว");
+  } catch (e) {
+    alert("เกิดข้อผิดพลาดในการจองคิว")
+    reserveLocked = false
+    startBtn.disabled = false
+    startBtn.innerText = "เริ่มงาน"
   }
 }
+
 function getNextQueue() {
   let current = parseInt(localStorage.getItem("current_seq"));
   let end = parseInt(localStorage.getItem("range_end"));
@@ -760,7 +758,6 @@ function confirmClearQueue() {
 
   flash("ล้างคิวเรียบร้อยแล้ว", true)
 }
-
     </script>
     <!-- Queue Popup -->
 

@@ -30,16 +30,12 @@ class Parcel(Base):
 class DailyCounter(Base):
     __tablename__ = "daily_counters"
     __table_args__ = (
-        UniqueConstraint('carrier_id', 'date', name='uix_carrier_date'),
+        UniqueConstraint('date', name='uix_date'),  # ❗ เอา carrier_id ออก
     )
 
     id = Column(Integer, primary_key=True, autoincrement=True)
 
-    carrier_id = Column(Integer, ForeignKey("carrier_list.carrier_id"), index=True)
-    carrier = relationship("CarrierList")
-
     date = Column(String, index=True, nullable=False)
-
     created_at = Column(DateTime(timezone=True), default=thai_now)
     last_seq = Column(Integer, nullable=False, default=0)
 
