@@ -5,7 +5,7 @@ from fastapi import FastAPI, HTTPException, Query, Response, Request, Header, De
 from fastapi.responses import RedirectResponse,FileResponse, JSONResponse
 from pydantic import BaseModel
 from .db import SessionLocal, init_db
-from .models import Parcel, DailyCounter, AuditLog, RecycledQueue,CarrierList
+from .models import Parcel, DailyCounter, AuditLog, RecycledQueue,CarrierList,QueueSection
 
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import or_, and_
@@ -163,7 +163,6 @@ def recipient_logout(request: Request):
 
     return response
 
-from pydantic import BaseModel
 
 class AdminLoginIn(BaseModel):
     name: str
@@ -261,11 +260,11 @@ def login(payload: LoginIn, request: Request):
 # Pydantic input model
 class ParcelIn(BaseModel):
     tracking_number: str
-    queue_number: str
-    carrier_staff_name: Optional[str] = None
     recipient_name: Optional[str] = None
     admin_staff_name: Optional[str] = None
-    provisional: bool = False   # if true -> create as PENDING (preview/reservation)
+    provisional: bool = False
+    section_id: int
+
 
 class ConfirmPickupIn(BaseModel):
     recipient_name: Optional[str] = None
@@ -280,7 +279,6 @@ class BulkDeleteIn(BaseModel):
 # Create parcel (check-in / provisional)
 # ---------------------------
 from sqlalchemy import cast, Integer
-
 @app.post("/api/parcels")
 def create_parcel(p: ParcelIn, request: Request):
     db = SessionLocal()
@@ -291,79 +289,36 @@ def create_parcel(p: ParcelIn, request: Request):
         if not carrier_id:
             raise HTTPException(401, "not logged in")
 
-        if not p.tracking_number:
-            raise HTTPException(400, "missing tracking_number")
-
-        carrier = db.query(CarrierList).filter(
-            CarrierList.carrier_id == carrier_id
-        ).first()
-
-        if not carrier:
-            raise HTTPException(400, "invalid carrier")
-
-        # ตรวจ duplicate tracking
         existing = db.query(Parcel).filter(
             Parcel.tracking_number == p.tracking_number
         ).first()
 
         if existing:
-            raise HTTPException(409, "tracking_number already exists")
+            raise HTTPException(409, "พัสดุชิ้นนี้แสกนแล้ว")
 
-        today = thai_now().strftime("%Y%m%d")
-
-        # ==========================================
-        # 🔥 1️⃣ ใช้ RecycledQueue ก่อนเสมอ
-        # ==========================================
-
-        recycled = (
-            db.query(RecycledQueue)
-            .filter(
-                RecycledQueue.carrier_id == carrier_id,
-                RecycledQueue.date == today
-            )
-            .order_by(cast(RecycledQueue.queue_number, Integer).asc())
+        # 🔥 lock section ที่เลือก
+        section = (
+            db.query(QueueSection)
+            .filter(QueueSection.id == p.section_id)
             .with_for_update()
             .first()
         )
 
-        if recycled:
-            queue_number = recycled.queue_number
-            db.delete(recycled)
+        if not section:
+            raise HTTPException(400, "invalid section")
 
-        else:
-            # ==========================================
-            # 🔥 2️⃣ ใช้ QueueReservation
-            # ==========================================
+        current_count = db.query(Parcel).filter(
+            Parcel.section_id == section.id
+        ).count()
 
-            reservation = (
-                db.query(QueueReservation)
-                .filter(
-                    QueueReservation.carrier_id == carrier_id,
-                    QueueReservation.date == today
-                )
-                .order_by(QueueReservation.id.desc())
-                .with_for_update()
-                .first()
-            )
+        next_queue = section.start_seq + current_count
 
-            if not reservation:
-                raise HTTPException(400, "ยังไม่ได้จองคิว")
+        if next_queue > section.end_seq:
+            raise HTTPException(400, "section เต็มแล้ว")
 
-            if reservation.current_seq > reservation.end_seq:
-                reservation.status = "completed"
-                db.commit()
-                raise HTTPException(400, "คิวหมดแล้ว")
-
-            queue_number = str(reservation.current_seq)
-            reservation.current_seq += 1
-
-            if reservation.current_seq > reservation.end_seq:
-                reservation.status = "completed"
-
-        # ==========================================
+        queue_number = str(next_queue)
 
         status = "กำลังรอ" if p.provisional else "ยังไม่ได้รับ"
-
         parcel = Parcel(
             tracking_number=p.tracking_number,
             carrier_id=carrier_id,
@@ -371,7 +326,8 @@ def create_parcel(p: ParcelIn, request: Request):
             queue_number=queue_number,
             recipient_name=p.recipient_name,
             admin_staff_name=p.admin_staff_name,
-            status=status
+            status=status,
+            section_id=section.id
         )
 
         db.add(parcel)
@@ -381,11 +337,15 @@ def create_parcel(p: ParcelIn, request: Request):
         return {
             "id": parcel.id,
             "queue_number": parcel.queue_number,
-            "status": parcel.status
+            "status": parcel.status,
+            "section_id": section.id
         }
 
     finally:
         db.close()
+
+
+
 
 # ---------------------------
 # Confirm pending -> RECEIVED
@@ -1279,66 +1239,221 @@ def list_audit_logs(
     ]
 from .models import QueueReservation
 
-@app.post("/api/queue/reserve")
-def reserve_queue_range(
-    amount: int,
-    request: Request
-):
+@app.post("/api/queue/init")
+def init_sections():
     db = SessionLocal()
     try:
-        carrier_id = request.session.get("carrier_id")
+        exists = db.query(QueueSection).first()
+        if exists:
+            return {"message": "already initialized"}
 
-        if not carrier_id:
-            raise HTTPException(401, "not logged in")
+        start = 1
+        for i in range(20):
+            end = start + 49
 
-        if amount <= 0:
-            raise HTTPException(400, "amount must be > 0")
+            db.add(QueueSection(
+                start_seq=start,
+                end_seq=end,
+            ))
 
-        today = thai_now().strftime("%Y%m%d")
+            start = end + 1
 
-        # 🔒 lock counter กันชนกัน
-        counter = (
-            db.query(DailyCounter)
-            .filter(DailyCounter.date == today)
-            .with_for_update()
-            .first()
-        )
-
-        if not counter:
-            counter = DailyCounter(
-                date=today,
-                last_seq=0
-            )
-            db.add(counter)
-            db.flush()
-
-        start = counter.last_seq + 1
-        end = counter.last_seq + amount
-
-        counter.last_seq = end
-
-
-        # ✅ บันทึก QueueReservation
-        reservation = QueueReservation(
-            carrier_id=carrier_id,
-            date=today,
-            start_seq=start,
-            end_seq=end,
-            current_seq=start,
-            status="active"
-        )
-
-        db.add(reservation)
         db.commit()
-
-        return {
-            "carrier_id": carrier_id,
-            "date": today,
-            "start": start,
-            "end": end,
-            "total": amount
-        }
+        return {"message": "20 sections created"}
 
     finally:
         db.close()
+
+
+# 🔥 ต้องอยู่นอก finally
+@app.get("/api/queue/sections")
+def get_sections(db: Session = Depends(get_db)):
+
+    sections = (
+        db.query(QueueSection)
+        .order_by(QueueSection.start_seq)
+        .all()
+    )
+
+    result = []
+
+    for s in sections:
+
+        total = s.end_seq - s.start_seq + 1
+
+        used = db.query(func.count(Parcel.id)).filter(
+            Parcel.section_id == s.id
+        ).scalar()
+
+        remaining = total - used
+
+        result.append({
+            "id": s.id,
+            "start_seq": s.start_seq,
+            "end_seq": s.end_seq,
+            "total": total,
+            "used": used,
+            "remaining": remaining
+        })
+
+    return result
+
+# 🔥 ต้องอยู่นอก finally
+
+@app.get("/api/queue/sections_available")
+def get_available_sections(
+    request: Request,
+    db: Session = Depends(get_db)
+):
+
+    carrier_id = request.session.get("carrier_id")
+    today = thai_now().strftime("%Y%m%d")
+
+    sections = db.query(QueueSection).order_by(
+        QueueSection.start_seq
+    ).all()
+
+    reservations = db.query(QueueReservation).filter(
+        QueueReservation.status == "active",
+        QueueReservation.date == today
+    ).all()
+
+    result = []
+
+    for s in sections:
+
+        status = "available"   # 🟢 default = ว่าง
+
+        for r in reservations:
+            if s.start_seq <= r.end_seq and s.end_seq >= r.start_seq:
+
+                if r.carrier_id == carrier_id:
+                    status = "mine"       # 🟡 เราใช้
+                else:
+                    status = "blocked"    # 🔘 คนอื่นใช้
+
+                break
+
+        result.append({
+            "id": s.id,
+            "start_seq": s.start_seq,
+            "end_seq": s.end_seq,
+            "status": status
+        })
+
+    return result
+
+from typing import List
+
+class ReserveIn(BaseModel):
+    section_ids: List[int]
+
+from datetime import datetime
+
+@app.post("/api/queue/reserve")
+def reserve_section(
+    payload: ReserveIn,
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    carrier_id = request.session.get("carrier_id")
+
+    if not carrier_id:
+        raise HTTPException(401, "not logged in")
+
+    today = thai_now().strftime("%Y%m%d")  # 🔥 ต้องเป็น string แบบนี้
+
+    sections = db.query(QueueSection).filter(
+        QueueSection.id.in_(payload.section_ids)
+    ).all()
+
+    if not sections:
+        raise HTTPException(400, "invalid section")
+
+    for s in sections:
+
+        # 🔥 เช็คเฉพาะวันเดียวกัน
+        overlap = db.query(QueueReservation).filter(
+            QueueReservation.status == "active",
+            QueueReservation.date == today,  # 🔥 สำคัญมาก
+            QueueReservation.start_seq <= s.end_seq,
+            QueueReservation.end_seq >= s.start_seq
+        ).first()
+
+        if overlap:
+            raise HTTPException(
+                400,
+                f"Section {s.start_seq}-{s.end_seq} ถูกจองแล้ว"
+            )
+
+        r = QueueReservation(
+            carrier_id=carrier_id,   # 🔥 ต้องใส่
+            date=today,              # 🔥 ต้องใส่ (string YYYYMMDD)
+            start_seq=s.start_seq,
+            end_seq=s.end_seq,
+            current_seq=s.start_seq,
+            status="active"
+            
+        )
+
+        db.add(r)
+
+    db.commit()
+
+    return {"message": "reserved"}
+
+class CancelIn(BaseModel):
+    section_ids: list[int]
+
+@app.post("/api/queue/cancel")
+def cancel_reservation(
+    payload: CancelIn,
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    carrier_id = request.session.get("carrier_id")
+    if not carrier_id:
+        raise HTTPException(401, "not logged in")
+
+    today = thai_now().strftime("%Y%m%d")
+
+    deleted = 0
+
+    for sid in payload.section_ids:
+
+        # 🔥 หา section
+        section = db.query(QueueSection).filter(
+            QueueSection.id == sid
+        ).first()
+
+        if not section:
+            continue
+
+        # 🔥 หา reservation ของ carrier นี้ในวันนี้ที่ตรงช่วง
+        reservation = db.query(QueueReservation).filter(
+            QueueReservation.carrier_id == carrier_id,
+            QueueReservation.date == today,
+            QueueReservation.start_seq == section.start_seq,
+            QueueReservation.end_seq == section.end_seq,
+            QueueReservation.status == "active"
+        ).first()
+
+        if not reservation:
+            continue
+
+        # ✅ 1️⃣ ลบ parcel ที่อยู่ใน section นี้
+        db.query(Parcel).filter(
+            Parcel.section_id == sid,
+            Parcel.carrier_id == carrier_id
+        ).delete(synchronize_session=False)
+
+        # ✅ 2️⃣ ลบ reservation
+        db.delete(reservation)
+
+        deleted += 1
+
+    db.commit()
+
+    return {"deleted": deleted}
+
 # EOF

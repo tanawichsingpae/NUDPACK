@@ -21,9 +21,12 @@ class Parcel(Base):
 
     queue_number = Column(String, index=True, nullable=True)
     status = Column(String, default="IN")
+    section_id = Column(Integer, ForeignKey("queue_sections.id"))
+
     recipient_name = Column(String, nullable=True)
     admin_staff_name = Column(String, nullable=True)
     picked_up_at = Column(DateTime(timezone=True), index=True, nullable=True)
+
 
 
 # ตัวนับรายวัน (DailyCounter) — ใช้เก็บเลขลำดับต่อวันแยกตาม carrier
@@ -89,3 +92,12 @@ class QueueReservation(Base):
     status = Column(String, default="active") 
 
     created_at = Column(DateTime(timezone=True), default=thai_now)
+
+class QueueSection(Base):
+    __tablename__ = "queue_sections"
+
+    id = Column(Integer, primary_key=True, index=True)
+    start_seq = Column(Integer)
+    end_seq = Column(Integer)
+
+    
