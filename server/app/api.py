@@ -278,8 +278,7 @@ class BulkDeleteIn(BaseModel):
 # ---------------------------
 # Create parcel (check-in / provisional)
 # ---------------------------
-from sqlalchemy import cast, Integer, func
-
+from sqlalchemy import cast, Integer
 @app.post("/api/parcels")
 def create_parcel(p: ParcelIn, request: Request):
     db = SessionLocal()
@@ -303,6 +302,7 @@ def create_parcel(p: ParcelIn, request: Request):
             db.query(QueueReservation)
             .filter(
                 QueueReservation.carrier_id == carrier_id,
+                QueueReservation.section_id == p.section_id,
                 QueueReservation.status == "active"
             )
 
@@ -318,17 +318,7 @@ def create_parcel(p: ParcelIn, request: Request):
         next_queue = None
 
         for r in reservations:
-
-            last_queue = (
-                db.query(func.max(Parcel.queue_number))
-                .filter(Parcel.section_id == r.section_id)
-                .scalar()
-            )
-
-            last_queue = int(last_queue) if last_queue else None
-            candidate = (last_queue or (r.start_seq - 1)) + 1
-
-
+            candidate = r.current_seq + 1
 
             if candidate <= r.end_seq:
                 selected_reservation = r
@@ -354,7 +344,7 @@ def create_parcel(p: ParcelIn, request: Request):
             recipient_name=p.recipient_name,
             admin_staff_name=p.admin_staff_name,
             status=status,
-            section_id=selected_reservation.section_id,
+            section_id=selected_reservation.id
 
         )
 
