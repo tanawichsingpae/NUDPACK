@@ -90,6 +90,7 @@ class QueueReservation(Base):
 
     current_seq = Column(Integer, nullable=False)   # 👈 เพิ่ม
     status = Column(String, default="active") 
+    section_id = Column(Integer, ForeignKey("queue_sections.id"))
 
     created_at = Column(DateTime(timezone=True), default=thai_now)
 

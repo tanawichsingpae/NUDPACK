@@ -207,7 +207,7 @@ hover:bg-red-100 active:scale-95 transition">
                 <span>ทั้งหมด: <strong id="previewCount">0</strong></span>
             </div>
 
-            <button id="confirmAllBtn" onclick="confirmAll()" disabled
+            <button id="confirmAllBtn" onclick="confirmAllCheck()" disabled
                 class="w-full bg-primary text-white py-4 rounded-xl font-bold disabled:opacity-50">
                 ยืนยันและอัปโหลดทั้งหมด
             </button>
@@ -271,6 +271,39 @@ hover:bg-red-100 active:scale-95 transition">
 
   </div>
 </div>
+<!-- Confirm Upload Popup -->
+<div id="confirmPopup"
+     class="fixed inset-0 bg-black/40 hidden items-center justify-center z-50">
+
+  <div class="bg-white rounded-2xl p-6 w-[350px] text-center shadow-xl">
+
+    <div class="mx-auto mb-3 w-14 h-14 flex items-center justify-center
+                rounded-full text-white text-2xl bg-red-500">
+      !
+    </div>
+
+    <h3 class="text-lg font-bold mb-2">ยืนยันการอัปโหลด</h3>
+
+    <p id="confirmMessage" class="text-gray-600 whitespace-pre-line"></p>
+
+    <div class="flex gap-3 mt-5">
+
+      <button onclick="closeConfirm()"
+              class="flex-1 py-2 rounded-xl font-semibold
+                     bg-gray-200 text-gray-700">
+        ยกเลิก
+      </button>
+
+      <button onclick="confirmAll()"
+              class="flex-1 py-2 rounded-xl font-semibold
+                     text-white bg-red-500">
+        ยืนยัน
+      </button>
+
+    </div>
+  </div>
+</div>
+
 
     <script>
         const SERVER = location.origin
@@ -482,6 +515,13 @@ ${new Date(p.created_at).toLocaleString("th-TH", { timeZone: "Asia/Bangkok" })}
             }
             preview = []; save(); render()
             flash("ยืนยันแล้ว", true)
+            localStorage.removeItem("parcelAmount")
+            localStorage.removeItem("selectedSections")
+            localStorage.removeItem("reserveLocked")
+            localStorage.removeItem("preview")
+
+            location.reload()
+
         }
 
         function save() { localStorage.setItem("preview", JSON.stringify(preview)) }
@@ -509,13 +549,45 @@ ${new Date(p.created_at).toLocaleString("th-TH", { timeZone: "Asia/Bangkok" })}
             queuePopup.classList.remove("flex")
         }
 
-        function logout() {
-            fetch("/logout", {
-                credentials: "include"
-            }).then(() => {
-                location.replace("/login_client")   // 👈 replace ไม่ให้กดย้อน
-            })
-        }
+        async function logout() {
+
+  try {
+
+    const savedSections = localStorage.getItem("selectedSections")
+
+    if (savedSections) {
+
+      const sectionIds = JSON.parse(savedSections)
+
+      if (sectionIds.length > 0) {
+        await fetch(`${SERVER}/api/queue/cancel`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            section_ids: sectionIds
+          })
+        })
+      }
+    }
+
+  } catch (e) {
+    console.error("cancel error", e)
+  }
+
+  // 🔥 ล้าง localStorage
+  localStorage.removeItem("parcelAmount")
+  localStorage.removeItem("selectedSections")
+  localStorage.removeItem("reserveLocked")
+  localStorage.removeItem("preview")
+
+  // 🔥 logout session server
+  fetch("/logout", {
+    credentials: "include"
+  }).finally(() => {
+    location.replace("/login_client")
+  })
+}
+
         const staffLabel = document.getElementById("staffLabel")
         const carrierLabel = document.getElementById("carrierLabel")
 
@@ -672,6 +744,8 @@ function renderSections() {
     if (s.status === "blocked") {
       baseColor = "bg-gray-200 text-gray-500 cursor-not-allowed"
     }
+
+
 
     card.className = `
       ${isSelected ? selectedColor : baseColor}
@@ -971,6 +1045,57 @@ function closeAlert() {
     popup.classList.remove("flex")
   }, 150)
 }
+function confirmAllCheck() {
+
+  const required = parseInt(document.getElementById("parcelAmount").value || 0)
+  const scanned = preview.length
+
+  const message =
+    
+    `หากยืนยันแล้วจะไม่สามารถกลับมาใช้ section เดิมได้`
+
+  document.getElementById("confirmMessage").innerText = message
+
+  const popup = document.getElementById("confirmPopup")
+  popup.classList.remove("hidden")
+  popup.classList.add("flex")
+}
+
+function closeConfirm() {
+  const popup = document.getElementById("confirmPopup")
+  popup.classList.add("hidden")
+  popup.classList.remove("flex")
+}
+
+function showConfirmPopup(message, onConfirm) {
+
+  const popup = document.getElementById("alertPopup")
+  const box = document.getElementById("alertBox")
+  const icon = document.getElementById("alertIcon")
+
+  document.getElementById("alertTitle").innerText = "ยืนยันการอัปโหลด"
+  document.getElementById("alertMessage").innerText = message
+
+  icon.className = "mx-auto mb-3 w-14 h-14 flex items-center justify-center rounded-full text-white text-2xl bg-red-500"
+  icon.innerHTML = "!"
+
+  const btn = box.querySelector("button")
+
+  btn.innerText = "ยืนยัน"
+  btn.onclick = () => {
+    closeAlert()
+    onConfirm()
+  }
+
+  popup.classList.remove("hidden")
+  popup.classList.add("flex")
+
+  setTimeout(() => {
+    box.classList.remove("scale-95", "opacity-0")
+    box.classList.add("scale-100", "opacity-100")
+  }, 10)
+}
+
 
 
     </script>
