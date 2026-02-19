@@ -60,7 +60,7 @@ input[name="confirmMode"]:checked + .modeBtn {
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
-<body class="bg-[#fafafa] font-display" onload="loadWaitingParcels()">
+<body class="bg-[#fafafa] font-display">
 
   <header class="sticky top-0 bg-white/80 backdrop-blur border-b p-4">
     <div class="max-w-xl mx-auto flex justify-between items-center">
@@ -103,9 +103,20 @@ hover:bg-red-100 active:scale-95 transition">
       <div class="absolute right-6 -top-1 flex items-center gap-2">
 
 </div>
+
       <div class="bg-white rounded-xl p-4 scan-zone">
         
-
+        
+        <div class="flex gap-3 mt-4">
+          <button onclick="startCamera()"
+            class="flex-1 bg-orange-500 text-white rounded-lg h-12 flex justify-center items-center gap-2">
+            <span class="material-symbols-outlined">photo_camera</span>เปิดกล้อง
+          </button>
+          <button onclick="stopCamera()"
+                        class="flex-1 border rounded-lg h-12 flex justify-center items-center gap-2">
+                        <span class="material-symbols-outlined">videocam_off</span>ปิดกล้อง
+                    </button>
+        </div>
         <label class="text-sm text-primary font-semibold">กรอกเลขพัสดุ</label>
 
         <div class="flex mt-2">
@@ -118,37 +129,32 @@ hover:bg-red-100 active:scale-95 transition">
           </button>
         </div>
 
-        <div class="flex gap-3 mt-4">
-          <button onclick="startCamera()"
-            class="flex-1 bg-orange-500 text-white rounded-lg h-12 flex justify-center items-center gap-2">
-            <span class="material-symbols-outlined">photo_camera</span>เปิดกล้อง
-          </button>
-          <button onclick="stopCamera()"
-                        class="flex-1 border rounded-lg h-12 flex justify-center items-center gap-2">
-                        <span class="material-symbols-outlined">videocam_off</span>ปิดกล้อง
-                    </button>
-        </div>
+<div id="cameraOverlay" class="fixed inset-0 bg-black/70 hidden z-50 flex items-center justify-center">
 
-        <div id="cameraOverlay" class="fixed inset-0 bg-black/70 hidden z-50 flex items-center justify-center">
+  <div class="bg-white rounded-2xl p-4 w-80 shadow-xl relative">
+    
+    <!-- ปุ่มกากบาท -->
+    <button onclick="stopCamera()" 
+            class="absolute top-3 right-3 text-gray-500 hover:text-red-500 text-xl font-bold">
+      &times;
+    </button>
 
-          <div class="bg-white rounded-2xl p-4 w-80 shadow-xl">
-            <div class="text-sm font-semibold mb-2 text-center text-gray-700">
+    <div class="text-sm font-semibold mb-2 text-center text-gray-700">
       สแกน QR code
     </div>
-            <div id="reader"></div>
 
-            <button onclick="stopCamera()" class="mt-4 w-full bg-orange-500 text-white py-2 rounded-xl">
-              ปิดกล้อง
-            </button>
+    <div id="reader"></div>
 
-          </div>
+  </div>
+</div>
+
 
         </div>
         <div id="scanStatus" class="text-sm mt-2"></div>
 
       </div>
     </section>
-
+    
 
 </div>
   <!-- popup -->
@@ -299,19 +305,25 @@ hover:bg-red-100 active:scale-95 transition">
   </div>
 </div>
   <!-- Confirm Camera Overlay -->
-  <div id="confirmCameraOverlay" class="fixed inset-0 bg-black/70 hidden z-50 flex items-center justify-center">
+<div id="confirmCameraOverlay" class="fixed inset-0 bg-black/70 hidden z-50 flex items-center justify-center">
 
-    <div class="bg-white rounded-2xl p-4 w-80 shadow-xl">
+  <div class="bg-white rounded-2xl p-4 w-80 shadow-xl relative">
 
-      <div id="confirmReader"></div>
+    <!-- ปุ่มกากบาท -->
+    <button 
+      onclick="stopConfirmCamera()" 
+      class="absolute top-3 right-3 text-gray-500 hover:text-red-500 text-2xl font-bold">
+      &times;
+    </button>
 
-      <button onclick="stopConfirmCamera()" class="mt-4 w-full bg-orange-400 text-white py-2 rounded-xl">
-        ปิดกล้อง
-      </button>
-
-    </div>
+    <div id="confirmReader" class="mt-6"></div>
 
   </div>
+
+</div>
+
+  
+  
   <!-- Not Found Popup -->
 <div id="notFoundPopup"
   class="fixed inset-0 hidden bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 px-4">
@@ -739,7 +751,7 @@ refreshRecentIfExists()
     async function doSearch() {
       const q = document.getElementById('searchInput').value.trim();
       if (!q) return alert('Please input tracking or queue');
-      const res = await fetch(`/api/parcels/search?q=${encodeURIComponent(q)}`);
+      const res = await fetch(`/api/recipient/parcels?q=${encodeURIComponent(q)}`);
 
       if (!res.ok) return alert('Search failed');
       const data = await res.json();
@@ -1400,7 +1412,7 @@ function applyDateFilter() {
   const queue = document.getElementById("queueSearch")?.value.trim() || "";
   const date = document.getElementById("dateFilter")?.value || "";
 
-  let url = `/api/parcels/search?`;
+  let url = `/api/recipient/parcels?`;
 
   if (queue) url += `q=${encodeURIComponent(queue)}&`;
   if (date) url += `date=${date}`;
@@ -1426,65 +1438,38 @@ function clearDateFilter(){
     location.replace("/login_recipient")   // 👈 replace ไม่ให้กดย้อน
   })
 }
+async function loadWaitingParcels(date = null) {
+  try {
 
-    async function loadWaitingParcels(date=null){
-      try {
-        const status = document.getElementById("statusFilter").value || "ทั้งหมด"
+    const status = document.getElementById("statusFilter")?.value || "ทั้งหมด"
 
-        let url = `/api/parcels?status=${encodeURIComponent(status)}`
+    let url = "/api/recipient/parcels"
 
-if(date){
-  url += `&date=${encodeURIComponent(date)}`
-}
-        const res = await fetch(url, {credentials: "include"})
-
-        if (!res.ok) throw new Error("โหลดรายการไม่สำเร็จ")
-
-        const data = await res.json()
-        const box = document.getElementById("parcelList")
-
-        if (!data.length) {
-          box.innerHTML = `<div class="text-sm text-gray-400">ไม่พบพัสดุ</div>`
-          return
-        }
-
-        box.innerHTML = data.map(p => `
-<div onclick="handleScan('${p.tracking_number}')"
-     class="flex justify-between items-center p-4 bg-white rounded-xl mb-2 border cursor-pointer hover:bg-orange-50">
-
-  <div class="flex gap-4">
-
-    <!-- queue circle -->
-    <div class="size-10 rounded-full border flex items-center justify-center font-bold">
-      ${p.queue_number ?? "-"}
-    </div>
-
-    <div>
-      <p class="font-bold">${p.tracking_number}</p>
-
-      <div class="flex items-center gap-2 mt-1">
-        <span class="text-xs bg-orange-100 px-2 rounded">
-          ${p.status}
-        </span>
-      </div>
-      <div>
-      ${p.created_at ? `
-<span class="text-xs bg-green-100 text-green-700 px-2 rounded">
-${new Date(p.created_at).toLocaleString("th-TH", { timeZone: "Asia/Bangkok" })}
-</span>` : ``}
-    </div>
-
-  </div>
-</div>
-</div>
-`).join("")
-
-      } catch (e) {
-        document.getElementById("parcelList").innerHTML =
-          `<div class="text-red-400 text-sm">โหลดข้อมูลไม่ได้</div>`
-        console.error(e)
-      }
+    if (status !== "ทั้งหมด") {
+      url += `?status=${encodeURIComponent(status)}`
     }
+
+    console.log("Fetching:", url)
+
+    const res = await fetch(url, { credentials: "include" })
+    const data = await res.json()
+
+    console.log("API result:", data)
+
+    if (!data.items || data.items.length === 0) {
+      document.getElementById("parcelList").innerHTML =
+        `<div class="text-gray-400 text-sm text-center py-4">ไม่พบพัสดุ</div>`
+      return
+    }
+
+    renderParcelList(data.items)
+
+  } catch (err) {
+    console.error(err)
+  }
+}
+
+
     function renderParcelList(items){
 
   const box = document.getElementById("parcelList")
@@ -1579,6 +1564,22 @@ document.addEventListener('click', e => {
     menu.classList.add('hidden');
   }
 });
+function handleSearchClick() {
+
+  const queue = document.getElementById("queueSearch")?.value.trim() || ""
+  const date  = document.getElementById("dateFilter")?.value || ""
+  const status = document.getElementById("statusFilter")?.value || "ทั้งหมด"
+
+  // ถ้าไม่กรอกอะไรเลย → ไม่ต้องยิง API
+  if (!queue && !date && (status === "ทั้งหมด")) {
+    document.getElementById("parcelList").innerHTML = ""
+    return
+  }
+
+  loadWaitingParcels(date)
+}
+
+
   </script>
 
   <script>
@@ -1590,6 +1591,10 @@ if(recipientName){
     el.textContent = recipientName
   }
 }
+window.addEventListener("DOMContentLoaded", () => {
+  loadWaitingParcels()
+})
+
 </script>
 
 </body>

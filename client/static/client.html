@@ -521,6 +521,7 @@ ${new Date(p.created_at).toLocaleString("th-TH", { timeZone: "Asia/Bangkok" })}
             localStorage.removeItem("preview")
 
             location.reload()
+            
 
         }
 
@@ -764,12 +765,32 @@ function renderSections() {
     if (!isSelected && isLimitReached) {
       card.classList.add("opacity-40", "pointer-events-none")
     }
+let remainText
+let remainClass = "text-500 font-semibold"
 
-    card.innerHTML = `
-      <div class="font-bold text-sm md:text-lg">
-        ${s.start_seq} - ${s.end_seq}
-      </div>
-    `
+if (s.status === "full") {
+
+  remainText = "ไม่เหลือคิวว่าง"
+
+} else {
+
+  const current = (s.current_seq ?? (s.start_seq - 1))
+
+  const remainStart = current + 1
+  remainText = `เหลือ ${remainStart}-${s.end_seq}`
+}
+
+
+card.innerHTML = `
+  <div class="font-bold text-sm md:text-lg">
+    ${s.start_seq}-${s.end_seq}
+  </div>
+
+  <div class="text-xs md:text-sm mt-1 ${remainClass}">
+    ${remainText}
+  </div>
+`
+
 
     if (s.status !== "blocked") {
       card.onclick = () => selectSection(s.id)
