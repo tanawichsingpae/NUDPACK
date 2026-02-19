@@ -745,6 +745,10 @@ function renderSections() {
     if (s.status === "blocked") {
       baseColor = "bg-gray-200 text-gray-500 cursor-not-allowed"
     }
+    if (s.status === "full") {
+      baseColor = "bg-white-200 text-white-600 cursor-not-allowed"
+    }
+
 
 
 
@@ -792,9 +796,10 @@ card.innerHTML = `
 `
 
 
-    if (s.status !== "blocked") {
-      card.onclick = () => selectSection(s.id)
-    }
+    if (s.status === "available" || s.status === "mine") {
+  card.onclick = () => selectSection(s.id)
+}
+
 
     grid.appendChild(card)
   })

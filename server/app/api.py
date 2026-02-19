@@ -5,7 +5,7 @@ from fastapi import FastAPI, HTTPException, Query, Response, Request, Header, De
 from fastapi.responses import RedirectResponse,FileResponse, JSONResponse
 from pydantic import BaseModel
 from .db import SessionLocal, init_db
-from .models import Parcel, DailyCounter, AuditLog, RecycledQueue,CarrierList,QueueSection
+from .models import Parcel, DailyCounter, AuditLog, RecycledQueue,CarrierList,QueueSection,User
 
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import or_, and_
@@ -249,10 +249,27 @@ class LoginIn(BaseModel):
     carrier_staff_name: str
 
 @app.post("/api/login_client")
-def login(payload: LoginIn, request: Request):
+def login(
+    payload: LoginIn,
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    # 🔎 หา user เดิม
+    user = db.query(User).filter(
+        User.name == payload.carrier_staff_name
+    ).first()
 
+    # ❗ ถ้าไม่มี → สร้างใหม่
+    if not user:
+        user = User(name=payload.carrier_staff_name)
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+
+    # ✅ เก็บ session
     request.session["carrier_id"] = payload.carrier_id
     request.session["carrier_staff_name"] = payload.carrier_staff_name
+    request.session["user_id"] = user.id   # ⭐ สำคัญมาก
 
     return {"ok": True}
 
@@ -285,6 +302,8 @@ def create_parcel(p: ParcelIn, request: Request):
     try:
         carrier_id = request.session.get("carrier_id")
         carrier_staff = request.session.get("carrier_staff_name")
+        user_id = request.session.get("user_id")
+
 
         if not carrier_id:
             raise HTTPException(401, "not logged in")
@@ -306,6 +325,7 @@ def create_parcel(p: ParcelIn, request: Request):
             .filter(
                 QueueReservation.date == today,
                 QueueReservation.carrier_id == carrier_id,
+                QueueReservation.user_id == user_id,
                 QueueReservation.status == "active"
             )
             .order_by(QueueReservation.start_seq.asc())
@@ -399,6 +419,7 @@ def confirm_pending(tracking: str, request: Request):
 
         active_reservations = db.query(QueueReservation).filter(
             QueueReservation.carrier_id == p.carrier_id,
+            QueueReservation.user_id == request.session.get("user_id"),
             QueueReservation.date == today,
             QueueReservation.status == "active"
         ).all()
@@ -1248,6 +1269,11 @@ def delete_parcel(tracking: str, db: Session = Depends(get_db)):
         min_seq = reservation.start_seq - 1
         reservation.current_seq = max(new_seq, min_seq)
 
+        # 🔥 FIX: อัปเดต status ใหม่
+        if reservation.current_seq < reservation.end_seq:
+            reservation.status = "active"
+        else:
+            reservation.status = "full"
     db.commit()
 
     return {"message": "Deleted and sequence updated"}
@@ -1476,6 +1502,7 @@ def reserve_section(
     db: Session = Depends(get_db)
 ):
     carrier_id = request.session.get("carrier_id")
+    user_id = request.session.get("user_id")
 
     if not carrier_id:
         raise HTTPException(401, "not logged in")
@@ -1519,6 +1546,7 @@ def reserve_section(
         r = QueueReservation(
             section_id=s.id,
             carrier_id=carrier_id,
+            user_id=user_id,
             date=today,
             start_seq=s.start_seq,
             end_seq=s.end_seq,
@@ -1554,6 +1582,7 @@ def cancel_reservation(
             QueueReservation.section_id == sid,
             QueueReservation.date == today,
             QueueReservation.carrier_id == carrier_id,
+            QueueReservation.user_id == request.session.get("user_id"),
             QueueReservation.status.in_(["active", "unactive", "full"])
         ).order_by(QueueReservation.id.desc()).first()
 

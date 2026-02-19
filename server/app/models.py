@@ -83,6 +83,9 @@ class QueueReservation(Base):
     carrier_id = Column(Integer, ForeignKey("carrier_list.carrier_id"), index=True)
     carrier = relationship("CarrierList")
 
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    user = relationship("User")
+
     date = Column(String, index=True, nullable=False)
 
     start_seq = Column(Integer, nullable=False)
@@ -101,4 +104,11 @@ class QueueSection(Base):
     start_seq = Column(Integer)
     end_seq = Column(Integer)
 
-    
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String, nullable=False)
+    carrier_id = Column(Integer, ForeignKey("carrier_list.carrier_id"), index=True)
+
+    created_at = Column(DateTime(timezone=True), default=thai_now)
