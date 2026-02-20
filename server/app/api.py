@@ -1593,11 +1593,12 @@ def reserve_section(
     for s in sections:
 
         # 🔥 หา current_seq สูงสุดของวันนี้ใน section นี้
-        last_used = db.query(func.max(QueueReservation.current_seq)).filter(
+        last_used = db.query(QueueReservation).filter(
             QueueReservation.section_id == s.id,
             QueueReservation.date == today,
-            QueueReservation.user_id == request.session.get("user_id")
-        ).scalar()
+            QueueReservation.user_id == request.session.get("user_id"),
+            QueueReservation.status.in_(["active", "unactive", "full"])
+        ).order_by(QueueReservation.id.desc()).first()
 
         if last_used is None:
             start_current = s.start_seq - 1
@@ -1608,6 +1609,7 @@ def reserve_section(
         active = db.query(QueueReservation).filter(
             QueueReservation.section_id == s.id,
             QueueReservation.date == today,
+            QueueReservation.user_id == request.session.get("user_id"),
             QueueReservation.status == "active"
         ).first()
 
@@ -1674,7 +1676,8 @@ def cancel_reservation(
 
         # 2️⃣ หา queue ล่าสุดที่เหลืออยู่ใน section นี้
         last_parcel = db.query(Parcel).filter(
-            Parcel.section_id == sid
+            Parcel.section_id == sid,
+            Parcel.user_id == request.session.get("user_id")
         ).order_by(Parcel.queue_number.desc()).first()
 
         if last_parcel:
@@ -1690,6 +1693,5 @@ def cancel_reservation(
     db.commit()
 
     return {"deleted": deleted}
-
 
 # EOF
