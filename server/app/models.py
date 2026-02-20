@@ -24,6 +24,7 @@ class Parcel(Base):
     section_id = Column(Integer, ForeignKey("queue_sections.id"))
 
     recipient_name = Column(String, nullable=True)
+    unofficial_recipient = Column(String, nullable=True)
     admin_staff_name = Column(String, nullable=True)
     picked_up_at = Column(DateTime(timezone=True), index=True, nullable=True)
 
@@ -110,5 +111,4 @@ class User(Base):
     id = Column(Integer, primary_key=True)
     name = Column(String, nullable=False)
     carrier_id = Column(Integer, ForeignKey("carrier_list.carrier_id"), index=True)
-
     created_at = Column(DateTime(timezone=True), default=thai_now)

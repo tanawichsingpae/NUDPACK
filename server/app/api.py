@@ -278,6 +278,7 @@ def login(
 class ParcelIn(BaseModel):
     tracking_number: str
     recipient_name: Optional[str] = None
+    unofficial_recipient: Optional[str] = None # 👈 เพิ่ม
     admin_staff_name: Optional[str] = None
     provisional: bool = False
     section_id: int
@@ -359,6 +360,10 @@ def create_parcel(p: ParcelIn, request: Request):
         else:
             current_reservation.status = "active"
 
+        carrier = db.query(CarrierList).filter(
+            CarrierList.carrier_id == carrier_id   # ✅ ใช้จาก session
+        ).first()
+        carrier_name = carrier.carrier_name if carrier else "Unknown"
         status = "กำลังรอ" if p.provisional else "ยังไม่ได้รับ"
         parcel = Parcel(
             tracking_number=p.tracking_number,
@@ -366,6 +371,7 @@ def create_parcel(p: ParcelIn, request: Request):
             carrier_staff_name=carrier_staff,
             queue_number=queue_number,
             recipient_name=p.recipient_name,
+            unofficial_recipient=p.unofficial_recipient, # 👈 เพิ่ม
             admin_staff_name=p.admin_staff_name,
             status=status,
             section_id=current_reservation.section_id
@@ -376,6 +382,20 @@ def create_parcel(p: ParcelIn, request: Request):
         db.add(parcel)
         db.commit()
         db.refresh(parcel)
+
+        write_audit(
+            db,
+            entity="พัสดุ",
+            entity_id=parcel.id,
+            action="เพิ่มหมายเลขพัสดุ",
+            user=f"พนักงานขนส่ง {carrier_name}: {carrier_staff}",
+            details=(
+                f"หมายเลขพัสดุ: {p.tracking_number}"
+                + (f"\nชื่อหน้ากล่อง: {p.unofficial_recipient}"
+                if p.unofficial_recipient else "")
+            ),
+        )
+        db.commit()
 
         return {
             "id": parcel.id,
@@ -481,8 +501,9 @@ def search_parcels(
         # ---------- date filter ----------
         if date:
             day = datetime.strptime(date, "%Y-%m-%d")
-            start = day
-            end = day + timedelta(days=1)
+            start = day.replace(hour=0, minute=0, second=0, microsecond=0,
+                                tzinfo=timezone(timedelta(hours=7)))
+            end = start + timedelta(days=1)
 
             query = query.filter(
                 and_(
@@ -511,66 +532,6 @@ def search_parcels(
 
     finally:
         db.close()
-@app.get("/api/recipient/parcels")
-def recipient_list_parcels(
-    q: str | None = None,
-    date: str | None = None,
-    status: str | None = None,
-):
-    db = SessionLocal()
-    try:
-        # 🔴 ถ้าไม่ใส่เลขคิว ไม่ต้องแสดงอะไร
-        if not q or not q.strip():
-            return {"items": []}
-
-        query = db.query(Parcel)
-
-        # แสดงเฉพาะที่มีเลขคิว
-        query = query.filter(Parcel.queue_number.isnot(None))
-
-        # ================= QUEUE FILTER =================
-        query = query.filter(
-            Parcel.queue_number.ilike(f"%{q.strip()}%")
-        )
-
-        # ================= DATE FILTER =================
-        if date:
-            day = datetime.strptime(date, "%Y-%m-%d")
-            start = day.replace(hour=0, minute=0, second=0, microsecond=0)
-            end = start + timedelta(days=1)
-
-            query = query.filter(
-                Parcel.created_at >= start,
-                Parcel.created_at < end
-            )
-
-        # ================= STATUS FILTER =================
-        if status and status != "ทั้งหมด":
-            query = query.filter(Parcel.status == status)
-
-        parcels = (
-            query.order_by(Parcel.created_at.desc())
-            .limit(100)
-            .all()
-        )
-
-        return {
-            "items": [
-                {
-                    "tracking_number": p.tracking_number,
-                    "queue_number": p.queue_number,
-                    "status": p.status,
-                    "recipient_name": p.recipient_name,
-                    "created_at": p.created_at.isoformat() if p.created_at else None,
-                    "picked_up_at": p.picked_up_at.isoformat() if p.picked_up_at else None,
-                }
-                for p in parcels
-            ]
-        }
-
-    finally:
-        db.close()
-
 
 # ---------------------------
 # Get single parcel
@@ -645,12 +606,114 @@ def pickup_parcel(
 # ---------------------------
 # List recent parcels
 # ---------------------------
+@app.get("/api/recipient/parcels")
+def recipient_list_parcels(
+    limit: int = 500,
+    status: Optional[str] = Query(None),
+    date: Optional[str] = Query(None),   # "today" | "YYYY-MM-DD" | None
+    queue: Optional[str] = Query(None),
+    recipient: Optional[str] = Query(None)
+):
+    db = SessionLocal()
+    try:
+        q = db.query(Parcel)
+        # ================= REQUIRE CONDITION =================
+        if date and not queue and not recipient:
+            raise HTTPException(
+                status_code=400,
+                detail="ไม่สามารถค้นหาด้วยวันที่อย่างเดียวได้ กรุณาระบุเลขคิวหรือชื่อผู้รับด้วย"
+            )
+
+        # ================= DATE FILTER =================
+        if date and date != "all":
+
+            if date == "today":
+                d = thai_now()
+
+            else:
+                d = None
+
+                # ลอง yyyy-mm-dd ก่อน
+                try:
+                    d = datetime.strptime(date, "%Y-%m-%d")
+                except ValueError:
+                    pass
+
+                # ถ้าไม่ใช่ → ลอง dd/mm/yyyy
+                if not d:
+                    try:
+                        d = datetime.strptime(date, "%d/%m/%Y")
+                    except ValueError:
+                        pass
+
+            if d:
+                start = d.replace(hour=0, minute=0, second=0, microsecond=0,
+                                  tzinfo=timezone(timedelta(hours=7)))
+                end = start + timedelta(days=1)
+
+                q = q.filter(
+                    Parcel.created_at >= start,
+                    Parcel.created_at < end
+                )
+# ================= QUEUE + RECIPIENT FILTER =================
+            if queue or recipient:
+
+                conditions = []
+
+                if queue:
+                    conditions.append(
+                        Parcel.queue_number.ilike(f"%{queue}%")
+                    )
+
+                if recipient:
+                    like = f"%{recipient}%"
+                    conditions.append(
+                        or_(
+                            Parcel.recipient_name.ilike(like),
+                            Parcel.unofficial_recipient.ilike(like),
+                        )
+                    )
+
+                q = q.filter(or_(*conditions))
+        rows = (
+            q.order_by(Parcel.created_at.asc())
+             .limit(limit)
+             .all()
+        )
+
+        out = []
+        for p in rows:
+            out.append({
+                "id": p.id,
+                "tracking_number": p.tracking_number,
+                "queue_number": p.queue_number,
+                "status": p.status,
+                "recipient_name": p.recipient_name,
+                "unofficial_recipient": p.unofficial_recipient,
+                "created_at": p.created_at.isoformat() if p.created_at else None,
+                "picked_up_at": p.picked_up_at.isoformat() if p.picked_up_at else None
+            })
+
+        return out
+
+    finally:
+        db.close()
+
+# ---------------------------
+# Search parcels (tracking or queue)
+# ---------------------------
+
+
+# ---------------------------
+# List recent parcels
+# ---------------------------
 @app.get("/api/parcels")
 def list_parcels(
     limit: int = 500,
     status: Optional[str] = Query(None),
     date: Optional[str] = Query(None),   # "today" | "YYYY-MM-DD" | None
     queue: Optional[str] = Query(None),
+    recipient: Optional[str] = Query(None),
     admin = Depends(require_admin)
 ):
     db = SessionLocal()
@@ -680,21 +743,34 @@ def list_parcels(
                         pass
 
             if d:
-                start = d.replace(hour=0, minute=0, second=0, microsecond=0)
+                start = d.replace(hour=0, minute=0, second=0, microsecond=0,
+                                  tzinfo=timezone(timedelta(hours=7)))
                 end = start + timedelta(days=1)
 
                 q = q.filter(
                     Parcel.created_at >= start,
                     Parcel.created_at < end
                 )
+# ================= QUEUE + RECIPIENT FILTER =================
+            if queue or recipient:
 
-        # ================= STATUS FILTER =================
-        if status and status != "ทั้งหมด":
-            q = q.filter(Parcel.status == status)
+                conditions = []
 
-        # ================= QUEUE FILTER =================
-        if queue:
-            q = q.filter(Parcel.queue_number.ilike(f"%{queue}%"))
+                if queue:
+                    conditions.append(
+                        Parcel.queue_number.ilike(f"%{queue}%")
+                    )
+
+                if recipient:
+                    like = f"%{recipient}%"
+                    conditions.append(
+                        or_(
+                            Parcel.recipient_name.ilike(like),
+                            Parcel.unofficial_recipient.ilike(like),
+                        )
+                    )
+
+                q = q.filter(or_(*conditions))
 
         rows = (
             q.order_by(Parcel.created_at.asc())
@@ -710,6 +786,7 @@ def list_parcels(
                 "queue_number": p.queue_number,
                 "status": p.status,
                 "recipient_name": p.recipient_name,
+                "unofficial_recipient": p.unofficial_recipient,
                 "created_at": p.created_at.isoformat() if p.created_at else None,
                 "picked_up_at": p.picked_up_at.isoformat() if p.picked_up_at else None
             })
@@ -718,10 +795,6 @@ def list_parcels(
 
     finally:
         db.close()
-
-# ---------------------------
-# Search parcels (tracking or queue)
-# ---------------------------
 
 
 # ---------------------------
@@ -1597,22 +1670,18 @@ def cancel_reservation(
         ).delete(synchronize_session=False)
         db.flush()  # ให้ DB update ก่อนนับใหม่
 
-        
-
-        db.commit()
-
         # 2️⃣ หา queue ล่าสุดที่เหลืออยู่ใน section นี้
         last_parcel = db.query(Parcel).filter(
             Parcel.section_id == sid
         ).order_by(Parcel.queue_number.desc()).first()
 
         if last_parcel:
-            reservation.current_seq = last_parcel.queue_number
+            reservation.current_seq = int(last_parcel.queue_number)
         else:
             reservation.current_seq = reservation.start_seq - 1
 
-        # 3️⃣ ลบ reservation
-        db.delete(reservation)
+        # 3️⃣ เปลี่ยนเป็น unactive แทนการลบ (เก็บ history current_seq ไว้)
+        reservation.status = "unactive"
 
         deleted += 1
 

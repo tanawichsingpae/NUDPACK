@@ -154,6 +154,55 @@ hover:bg-red-100 active:scale-95 transition">
 
       </div>
     </section>
+    <section class="px-4 mt-2">
+      <div class="flex gap-2 items-center flex-wrap">
+
+        <!-- queue search -->
+        <input id="queueSearch" placeholder="ค้นหาเลขคิว" class="border px-4 py-2 rounded-xl text-sm w-32 shadow-sm
+             focus:ring-2 focus:ring-orange-400 focus:outline-none">
+
+        <!-- recipient search -->
+        <input id="recipientSearch" placeholder="ค้นหาชื่อหน้ากล่อง" class="border px-4 py-2 rounded-xl text-sm w-40 shadow-sm
+             focus:ring-2 focus:ring-orange-400 focus:outline-none"> <!-- date -->
+        <input id="dateFilter" type="text" placeholder="เลือกวันที่" onfocus="this.type='date'"
+          onblur="if(!this.value)this.type='text'" class="border px-2 py-2 rounded-lg text-xs shadow-sm w-28
+             focus:ring-2 focus:ring-orange-400 focus:outline-none" />
+
+        <!-- search button -->
+        <button type="button" onclick="loadWaitingParcels()"
+          class="bg-orange-500 hover:bg-orange-600 transition text-white px-4 py-2 rounded-xl text-sm shadow">
+          ค้นหา
+        </button>
+
+      </div>
+
+
+    </section>
+    
+
+    <!-- ================= Parcel List ================= -->
+    <section class="px-4 mt-3">
+      <div class="flex items-center justify-between mb-2">
+
+        <h3 class="font-semibold">รายการพัสดุ</h3>
+
+        <!-- status filter (small right side) -->
+        <select id="statusFilter" onchange="loadWaitingParcels()" class="appearance-none rounded-lg border border-gray-300 bg-white
+             px-3 py-1.5 text-xs w-36
+             shadow-sm transition
+             hover:border-orange-300
+             focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-orange-400">
+          <option value="ทั้งหมด" selected>ทั้งหมด</option>
+          <option value="ยังไม่ได้รับ">ยังไม่ได้รับ</option>
+          <option value="ได้รับแล้ว">ได้รับแล้ว</option>
+          <option value="กำลังรอ">กำลังรอ</option>
+        </select>
+
+      </div>
+
+      <div id="parcelList" class="flex flex-col gap-2"></div>
+    </section>
+
     
 
 </div>
@@ -590,11 +639,11 @@ function confirmRecipientPickup(tracking, recipientName) {
 </div>
 
 <!-- Confirm Mode -->
-<div class="mt-4 bg-slate-100 p-1 flex text-xs">
+<div class="mt-4 bg-orange-400 p-1 flex text-xs rounded-lg border border-orange-400">
 
   <label class="flex-1">
     <input type="radio" name="confirmMode" value="scan" hidden>
-    <div class="modeBtn flex items-center justify-center gap-1">
+    <div class="modeBtn flex items-center justify-center gap-1 text-white">
       <span class="material-symbols-outlined text-[14px]">qr_code_scanner</span>
       สแกน
     </div>
@@ -602,7 +651,7 @@ function confirmRecipientPickup(tracking, recipientName) {
 
   <label class="flex-1">
     <input type="radio" name="confirmMode" value="manual" hidden>
-    <div class="modeBtn flex items-center justify-center gap-1">
+    <div class="modeBtn flex items-center justify-center gap-1 text-white">
       <span class="material-symbols-outlined text-[14px]">keyboard</span>
       กรอกเอง
     </div>
@@ -1438,48 +1487,78 @@ function clearDateFilter(){
     location.replace("/login_recipient")   // 👈 replace ไม่ให้กดย้อน
   })
 }
-async function loadWaitingParcels(date = null) {
-  try {
 
-    const status = document.getElementById("statusFilter")?.value || "ทั้งหมด"
+        async function loadWaitingParcels() {
+          try {
 
-    let url = "/api/recipient/parcels"
+            const status = document.getElementById("statusFilter")?.value;
+            const queue = document.getElementById("queueSearch")?.value.trim();
+            const dateUI = document.getElementById("dateFilter")?.value;
 
-    if (status !== "ทั้งหมด") {
-      url += `?status=${encodeURIComponent(status)}`
-    }
+            const params = new URLSearchParams();
 
-    console.log("Fetching:", url)
+            // ===== STATUS =====
+            if (status && status !== "ทั้งหมด") {
+              params.append("status", status);
+            }
 
-    const res = await fetch(url, { credentials: "include" })
-    const data = await res.json()
+            // ===== QUEUE =====
+            if (queue) {
+              params.append("queue", queue);
+            }
 
-    console.log("API result:", data)
+            // ===== DATE =====
+            if (dateUI) {
+              // input type="date" จะได้ yyyy-mm-dd อยู่แล้ว
+              params.append("date", dateUI);
+            }
 
-    if (!data.items || data.items.length === 0) {
-      document.getElementById("parcelList").innerHTML =
-        `<div class="text-gray-400 text-sm text-center py-4">ไม่พบพัสดุ</div>`
-      return
-    }
-
-    renderParcelList(data.items)
-
-  } catch (err) {
-    console.error(err)
-  }
-}
+            // ===== RECIPIENT =====
+            const recipientVal = document.getElementById("recipientSearch")?.value.trim();
+            if (recipientVal) {
+              params.append("recipient", recipientVal);
+            }
 
 
-    function renderParcelList(items){
+            const res = await fetch(`/api/recipient/parcels?${params.toString()}`, {
+              credentials: "include"
+            });
 
-  const box = document.getElementById("parcelList")
+            if (!res.ok) throw new Error("โหลดรายการไม่สำเร็จ");
 
-  if(!items || !items.length){
-    box.innerHTML = `<div class="text-sm text-gray-400">ไม่พบพัสดุ</div>`
-    return
-  }
+            const data = await res.json();
+            lastParcelData = data;
+            renderParcelList(data);
 
-  box.innerHTML = items.map(p => `
+          } catch (err) {
+            console.error(err);
+          }
+        }
+        function renderParcelList(items) {
+
+          const box = document.getElementById("parcelList")
+
+          if (!items || !items.length) {
+            box.innerHTML = `<div class="text-sm text-gray-400">ไม่พบพัสดุ</div>`
+            return
+          }
+
+          box.innerHTML = items.map(p => {
+            // Build recipient display (always show)
+            let recipientHtml = ''
+            const parts = []
+            if (p.recipient_name) parts.push(escapeHtml(p.recipient_name))
+            if (p.unofficial_recipient) parts.push(`<span class="text-purple-600">(ชื่อหน้ากล่อง: ${escapeHtml(p.unofficial_recipient)})</span>`)
+            if (parts.length) {
+              recipientHtml = `
+          <div class="mt-1">
+            <span class="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded">
+              ${parts.join(' ')}
+            </span>
+          </div>`
+            }
+
+            return `
 <div onclick="handleScan('${p.tracking_number || p.tracking}')"
  class="flex justify-between items-center p-4 bg-white rounded-xl mb-2 border cursor-pointer hover:bg-orange-50">
 
@@ -1499,15 +1578,18 @@ ${p.status}
 ${p.created_at ? `
 <div class="mt-1">
 <span class="text-xs bg-green-100 text-green-700 px-2 rounded">
-${new Date(p.created_at).toLocaleString("th-TH",{timeZone:"Asia/Bangkok"})}
+${new Date(p.created_at).toLocaleString("th-TH", { timeZone: "Asia/Bangkok" })}
 </span>
 </div>` : ``}
+
+${recipientHtml}
 
 </div>
 </div>
 </div>
-`).join("")
-}
+`
+          }).join("")
+        }
 async function openReportPage(){
   adminPage.classList.add("hidden")
   reportPage.classList.remove("hidden")
@@ -1591,10 +1673,16 @@ if(recipientName){
     el.textContent = recipientName
   }
 }
-window.addEventListener("DOMContentLoaded", () => {
-  loadWaitingParcels()
-})
+document.addEventListener("DOMContentLoaded", function () {
+    const input = document.getElementById("dateFilter")
 
+    const thaiDate = new Date().toLocaleDateString("sv-SE", {
+        timeZone: "Asia/Bangkok"
+    })
+
+    input.type = "date"
+    input.value = thaiDate
+})
 </script>
 
 </body>

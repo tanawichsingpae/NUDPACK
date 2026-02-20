@@ -109,19 +109,34 @@ function actionBadge(action) {
     </span>
   `;
 }
-
 function renderDetails(details) {
     if (!details) {
         return `<p class="italic text-[#9e6747]">ไม่มีรายละเอียด</p>`;
     }
 
-    return escape(details)
-        .split(",")
+    const safe = escape(details);
+
+    // ถ้ามี = แสดงแบบ key/value
+    if (safe.includes("=")) {
+        return safe
+            .split(",")
+            .map((d) => {
+                const parts = d.split("=");
+                return `
+                <div class="flex justify-between">
+                    <span class="text-[#9e6747]">${parts[0] || ""}</span>
+                    <span class="font-mono">${parts[1] || ""}</span>
+                </div>
+                `;
+            })
+            .join("");
+    }
+
+    // ถ้าไม่มี = ให้แสดงแบบหลายบรรทัดตาม \n
+    return safe
+        .split("\n")
         .map(
-            (d) => `<div class="flex justify-between">
-        <span class="text-[#9e6747]">${d.split("=")[0]}</span>
-        <span class="font-mono">${d.split("=")[1] || ""}</span>
-      </div>`
+            (line) => `<div class="font-mono">${line}</div>`
         )
         .join("");
 }
