@@ -24,6 +24,7 @@ class Parcel(Base):
     section_id = Column(Integer, ForeignKey("queue_sections.id"))
 
     recipient_name = Column(String, nullable=True)
+    unofficial_recipient = Column(String, nullable=True) # 👈 เพิ่ม
     admin_staff_name = Column(String, nullable=True)
     picked_up_at = Column(DateTime(timezone=True), index=True, nullable=True)
 
