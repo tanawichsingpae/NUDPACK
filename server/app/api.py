@@ -1634,8 +1634,10 @@ def reserve_section(
     return {"message": "reserved"}
 
 
+
 class CancelIn(BaseModel):
     section_ids: list[int]
+
 @app.post("/api/queue/cancel")
 def cancel_reservation(
     payload: CancelIn,
@@ -1643,6 +1645,8 @@ def cancel_reservation(
     db: Session = Depends(get_db)
 ):
     carrier_id = request.session.get("carrier_id")
+    user_id = request.session.get("user_id")
+
     if not carrier_id:
         raise HTTPException(401, "not logged in")
 
@@ -1655,34 +1659,36 @@ def cancel_reservation(
             QueueReservation.section_id == sid,
             QueueReservation.date == today,
             QueueReservation.carrier_id == carrier_id,
-            QueueReservation.user_id == request.session.get("user_id"),
+            QueueReservation.user_id == user_id,
             QueueReservation.status.in_(["active", "unactive", "full"])
         ).order_by(QueueReservation.id.desc()).first()
 
         if not reservation:
             continue
 
-        # 1️⃣ ลบ parcel ที่ยังรอ
+        # 1️⃣ ลบพัสดุที่ยังรอ
         db.query(Parcel).filter(
             Parcel.section_id == sid,
             Parcel.carrier_id == carrier_id,
             Parcel.status == "กำลังรอ"
         ).delete(synchronize_session=False)
-        db.flush()  # ให้ DB update ก่อนนับใหม่
 
-        # 2️⃣ หา queue ล่าสุดที่เหลืออยู่ใน section นี้
+        db.flush()
+
+        # 2️⃣ หา queue ล่าสุดจริง (ที่ยังไม่ถูกลบ)
         last_parcel = db.query(Parcel).filter(
             Parcel.section_id == sid,
-            Parcel.carrier_id == carrier_id,
-            Parcel.date == today
-        ).order_by(Parcel.queue_number.desc()).first()
+            Parcel.carrier_id == carrier_id
+        ).order_by(
+            cast(Parcel.queue_number, Integer).desc()
+        ).first()
 
         if last_parcel:
             reservation.current_seq = int(last_parcel.queue_number)
         else:
             reservation.current_seq = reservation.start_seq - 1
 
-        # 3️⃣ เปลี่ยนเป็น unactive แทนการลบ (เก็บ history current_seq ไว้)
+        # 3️⃣ reset reservation
         reservation.status = "unactive"
 
         deleted += 1
@@ -1690,6 +1696,5 @@ def cancel_reservation(
     db.commit()
 
     return {"deleted": deleted}
-
 
 # EOF
