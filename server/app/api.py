@@ -1655,6 +1655,7 @@ def cancel_reservation(
 
     for sid in payload.section_ids:
 
+        # 🔎 หา reservation ล่าสุดของ user ใน section นี้
         reservation = db.query(QueueReservation).filter(
             QueueReservation.section_id == sid,
             QueueReservation.date == today,
@@ -1666,7 +1667,7 @@ def cancel_reservation(
         if not reservation:
             continue
 
-        # 1️⃣ ลบพัสดุที่ยังรอ
+        # 1️⃣ ลบเฉพาะพัสดุที่ยัง "กำลังรอ"
         db.query(Parcel).filter(
             Parcel.section_id == sid,
             Parcel.carrier_id == carrier_id,
@@ -1675,20 +1676,10 @@ def cancel_reservation(
 
         db.flush()
 
-        # 2️⃣ หา queue ล่าสุดจริง (ที่ยังไม่ถูกลบ)
-        last_parcel = db.query(Parcel).filter(
-            Parcel.section_id == sid,
-            Parcel.carrier_id == carrier_id
-        ).order_by(
-            cast(Parcel.queue_number, Integer).desc()
-        ).first()
+        # 2️⃣ RESET current_seq แบบ deterministic
+        reservation.current_seq = reservation.start_seq - 1
 
-        if last_parcel:
-            reservation.current_seq = int(last_parcel.queue_number)
-        else:
-            reservation.current_seq = reservation.start_seq - 1
-
-        # 3️⃣ reset reservation
+        # 3️⃣ เปลี่ยนสถานะเป็น unactive
         reservation.status = "unactive"
 
         deleted += 1
