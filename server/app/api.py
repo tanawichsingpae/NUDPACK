@@ -57,6 +57,23 @@ def write_audit(db, *, entity, entity_id, action, user, details):
     )
     db.add(log)
 
+from sqlalchemy import func
+
+def normalize_tracking_column(column):
+    """
+    ทำให้ tracking ใน DB:
+    - ตัด space
+    - ไม่สนตัวเล็กใหญ่
+    """
+    return func.replace(
+        func.lower(column),
+        " ",
+        ""
+    )
+
+def normalize_tracking_value(value: str):
+    return value.strip().replace(" ", "").lower()
+
 
 app.add_middleware(
     SessionMiddleware,
@@ -309,8 +326,10 @@ def create_parcel(p: ParcelIn, request: Request):
         if not carrier_id:
             raise HTTPException(401, "not logged in")
 
+        tracking_clean = normalize_tracking_value(p.tracking_number)
+
         existing = db.query(Parcel).filter(
-            Parcel.tracking_number == p.tracking_number
+            normalize_tracking_column(Parcel.tracking_number) == tracking_clean
         ).first()
 
         if existing:
@@ -390,10 +409,11 @@ def create_parcel(p: ParcelIn, request: Request):
             action="เพิ่มหมายเลขพัสดุ",
             user=f"พนักงานขนส่ง {carrier_name}: {carrier_staff}",
             details=(
-                f"หมายเลขพัสดุ: {p.tracking_number}"
-                + (f"\nชื่อหน้ากล่อง: {p.unofficial_recipient}"
-                if p.unofficial_recipient else "")
-            ),
+                    f"หมายเลขพัสดุ: {p.tracking_number}"
+                    f"\nเลขคิว: {parcel.queue_number}"
+                    + (f"\nชื่อหน้ากล่อง: {p.unofficial_recipient}"
+                    if p.unofficial_recipient else "")
+                ),
         )
         db.commit()
 
@@ -421,7 +441,11 @@ def confirm_pending(tracking: str, request: Request):
     try:
         carrier_staff = request.session.get("carrier_staff_name")
         
-        p = db.query(Parcel).filter(Parcel.tracking_number == tracking).first()
+        tracking_clean = normalize_tracking_value(tracking)
+
+        p = db.query(Parcel).filter(
+            normalize_tracking_column(Parcel.tracking_number) == tracking_clean
+        ).first()
         if not p:
             raise HTTPException(status_code=404, detail="parcel not found")
         if p.status != "กำลังรอ":
@@ -470,7 +494,12 @@ def confirm_pending(tracking: str, request: Request):
             entity_id=p.id, 
             action="ยืนยันการเพิ่มหมายเลขพัสดุ", 
             user=f"พนักงานขนส่ง {carrier_name}: {carrier_staff}",
-            details=f"หมายเลขพัสดุ: {p.tracking_number}"
+            details=(
+                    f"หมายเลขพัสดุ: {p.tracking_number}"
+                    f"\nเลขคิว: {p.queue_number}"
+                    + (f"\nชื่อหน้ากล่อง: {p.unofficial_recipient}"
+                    if p.unofficial_recipient else "")
+                ),
         )
         db.commit()
 
@@ -540,7 +569,11 @@ def search_parcels(
 def get_parcel(tracking: str):
     db = SessionLocal()
     try:
-        p = db.query(Parcel).filter(Parcel.tracking_number == tracking).first()
+        tracking_clean = normalize_tracking_value(tracking)
+
+        p = db.query(Parcel).filter(
+            normalize_tracking_column(Parcel.tracking_number) == tracking_clean
+        ).first()
         if not p:
             raise HTTPException(status_code=404, detail="not found")
         return {
@@ -571,8 +604,10 @@ def pickup_parcel(
 
     db = SessionLocal()
     try:
+        tracking_clean = normalize_tracking_value(tracking)
+
         p = db.query(Parcel).filter(
-            Parcel.tracking_number == tracking
+            normalize_tracking_column(Parcel.tracking_number) == tracking_clean
         ).first()
         if not p:
             raise HTTPException(404, "parcel not found")
@@ -595,7 +630,12 @@ def pickup_parcel(
             entity_id=p.id,
             action="ได้รับพัสดุ",
             user=f"ผู้รับ: {recipient['name']}",
-            details=f"หมายเลขพัสดุ: {p.tracking_number}"
+            details=(
+                    f"หมายเลขพัสดุ: {p.tracking_number}"
+                    f"\nเลขคิว: {p.queue_number}"
+                    + (f"\nชื่อหน้ากล่อง: {p.unofficial_recipient}"
+                    if p.unofficial_recipient else "")
+                ),
         )
         db.commit()
 
@@ -617,6 +657,10 @@ def recipient_list_parcels(
     db = SessionLocal()
     try:
         q = db.query(Parcel)
+
+        # ================= STATUS FILTER =================
+        if status and status != "ทั้งหมด":
+            q = q.filter(Parcel.status == status)
         # ================= REQUIRE CONDITION =================
         if date and not queue and not recipient:
             raise HTTPException(
@@ -720,6 +764,10 @@ def list_parcels(
     try:
         q = db.query(Parcel)
 
+        # ================= STATUS FILTER =================
+        if status and status != "ทั้งหมด":
+            q = q.filter(Parcel.status == status)
+
         # ================= DATE FILTER =================
         if date and date != "all":
 
@@ -800,13 +848,26 @@ def list_parcels(
 # ---------------------------
 # Two-step checkout endpoints for UI double-scan
 # ---------------------------
+
+from sqlalchemy import func
+
 @app.post("/api/parcels/{tracking}/verify")
 def verify_parcel(tracking: str):
     db = SessionLocal()
     try:
-        p = db.query(Parcel).filter(Parcel.tracking_number == tracking).first()
+        tracking_clean = tracking.strip().replace(" ", "").lower()
+
+        p = db.query(Parcel).filter(
+            func.replace(
+                func.lower(Parcel.tracking_number),
+                " ",
+                ""
+            ) == tracking_clean
+        ).first()
+
         if not p:
             raise HTTPException(status_code=404, detail="parcel not found")
+
         return {
             "tracking": p.tracking_number,
             "queue_number": p.queue_number,
@@ -827,8 +888,10 @@ def confirm_pickup(
 ):
     db = SessionLocal()
     try:
+        tracking_clean = normalize_tracking_value(tracking)
+
         p = db.query(Parcel).filter(
-            Parcel.tracking_number == tracking
+            normalize_tracking_column(Parcel.tracking_number) == tracking_clean
         ).first()
 
         if not p:
@@ -859,8 +922,15 @@ def confirm_pickup(
                 entity_id=p.id,
                 action="ยืนยันการรับพัสดุ",
                 user=f"เจ้าหน้าที่: {admin['name']}",
-                details=f"ผู้รับ: {p.recipient_name} , หมายเลขพัสดุ: {p.tracking_number}"
+                details=(
+                    f"ผู้รับ: {p.recipient_name}"
+                    f"\nหมายเลขพัสดุ: {p.tracking_number}"
+                    f"\nเลขคิว: {p.queue_number}"
+                    + (f"\nชื่อหน้ากล่อง: {p.unofficial_recipient}"
+                    if p.unofficial_recipient else "")
+                ),
             )
+
             db.commit()
 
             return {
@@ -888,7 +958,13 @@ def confirm_pickup(
             entity_id=p.id,
             action="ยืนยันการรับพัสดุ",
             user=f"เจ้าหน้าที่: {admin['name']}",
-            details=f"ผู้รับ: {p.recipient_name} , หมายเลขพัสดุ: {p.tracking_number}"
+            details=(
+                    f"ผู้รับ: {p.recipient_name}"
+                    f"\nหมายเลขพัสดุ: {p.tracking_number}"
+                    f"\nเลขคิว: {p.queue_number}"
+                    + (f"\nชื่อหน้ากล่อง: {p.unofficial_recipient}"
+                    if p.unofficial_recipient else "")
+                ),
         )
         db.commit()
         
@@ -915,7 +991,11 @@ def confirm_pickup_recipient(
         raise HTTPException(status_code=401, detail="not logged in")
 
     try:
-        p = db.query(Parcel).filter(Parcel.tracking_number == tracking).first()
+        tracking_clean = normalize_tracking_value(tracking)
+
+        p = db.query(Parcel).filter(
+            normalize_tracking_column(Parcel.tracking_number) == tracking_clean
+        ).first()
         if not p:
             raise HTTPException(status_code=404, detail="parcel not found")
 
@@ -932,7 +1012,12 @@ def confirm_pickup_recipient(
             entity_id=p.id,
             action="ได้รับพัสดุ",
             user=f"ผู้รับ: {recipient['name']}",
-            details=f"หมายเลขพัสดุ: {p.tracking_number}"
+            details=(
+                    f"หมายเลขพัสดุ: {p.tracking_number}"
+                    f"\nเลขคิว: {p.queue_number}"
+                    + (f"\nชื่อหน้ากล่อง: {p.unofficial_recipient}"
+                    if p.unofficial_recipient else "")
+                ),
         )
 
         db.commit()
@@ -1302,7 +1387,12 @@ def bulk_delete_parcels(
                 entity_id=p.id,
                 action="ลบรายการพัสดุ",
                 user=f"เจ้าหน้าที่: {admin_name}",
-                details=f"หมายเลขพัสดุ: {p.tracking_number}"
+                details=(
+                    f"หมายเลขพัสดุ: {p.tracking_number}"
+                    f"\nเลขคิว: {p.queue_number}"
+                    + (f"\nชื่อหน้ากล่อง: {p.unofficial_recipient}"
+                    if p.unofficial_recipient else "")
+                ),
             )
 
         db.commit()
@@ -1372,7 +1462,7 @@ from sqlalchemy import or_
 
 @app.get("/api/audit_logs")
 def list_audit_logs(
-    limit: int = 200,
+    limit: int = 1000,
     before: str | None = None,
     q: str | None = None,
     action: str | None = None,

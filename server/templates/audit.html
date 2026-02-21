@@ -52,6 +52,16 @@
 <header class="sticky top-0 bg-white/80 backdrop-blur border-b p-4">
     <div class="max-w-xl mx-auto flex justify-between items-center">
       <div class="flex gap-3 items-center">
+        <button onclick="goBack()" 
+  class="flex items-center justify-center w-9 h-9 rounded-lg 
+         bg-white dark:bg-[#2d1f18] 
+         border border-gray-200 dark:border-transparent
+         shadow-sm hover:bg-gray-50 active:scale-95 transition">
+
+  <span class="material-symbols-outlined text-[18px] text-gray-600 dark:text-white">
+    arrow_back
+  </span>
+</button>
         <img src="/static/NUDPACK_LOGO2.png" class="w-14" />
         <div>
   <h2 class="font-bold">NUDPACK ADMIN</h2>
@@ -153,6 +163,8 @@ if(adminName){
   if(el){
     el.textContent = adminName
   }
+}function goBack() {
+  window.history.back()
 }
 </script>
 </body></html>

@@ -269,7 +269,9 @@ hover:bg-red-100 active:scale-95 transition">
         !
       </div>
 
-      <h3 class="text-lg font-bold mb-2">ยืนยันการอัปโหลด</h3>
+      <h3 id="confirmTitle" class="text-lg font-bold mb-2">
+  ยืนยันการอัปโหลด
+</h3>
 
       <p id="confirmMessage" class="text-gray-600 whitespace-pre-line"></p>
 
@@ -905,43 +907,63 @@ ${new Date(p.created_at).toLocaleString("th-TH", { timeZone: "Asia/Bangkok" })}
 
       btn.classList.remove("hidden")
     }
-    async function cancelMultipleReservations() {
+    function cancelMultipleReservations() {
 
-      if (!selectedSections.length) return
+  if (!selectedSections.length) return
 
-      try {
+  const popup = document.getElementById("confirmPopup")
 
-        await fetch(`${SERVER}/api/queue/cancel`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            section_ids: selectedSections
-          })
+  // 🔥 เปลี่ยนหัว
+  document.getElementById("confirmTitle").innerText = "ยกเลิกการจอง"
+
+  document.getElementById("confirmMessage").innerText =
+    "ต้องการยกเลิกการจองหรือไม่"
+
+  const confirmBtn = popup.querySelector("button.bg-red-500")
+  confirmBtn.innerText = "ตกลง"
+
+  confirmBtn.onclick = async () => {
+
+    try {
+
+      await fetch(`${SERVER}/api/queue/cancel`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          section_ids: selectedSections
         })
+      })
 
-        // 🔥 ลบ preview ที่อยู่ใน section นี้ออก
-        preview = preview.filter(p =>
-          !selectedSections.includes(p.section_id)
-        )
+      preview = preview.filter(p =>
+        !selectedSections.includes(p.section_id)
+      )
 
-        save()
-        render()
+      save()
+      render()
 
-        showAlert("ยกเลิกสำเร็จ")
-        localStorage.removeItem("parcelAmount")
-        localStorage.removeItem("selectedSections")
-        localStorage.removeItem("reserveLocked")
+      showAlert("ยกเลิกการจองสำเร็จ", "success", "สำเร็จ")
 
-        selectedSections = []
-        reserveLocked = false
+      localStorage.removeItem("parcelAmount")
+      localStorage.removeItem("selectedSections")
+      localStorage.removeItem("reserveLocked")
 
-        updateActionButton()
-        await loadAvailableSections()
+      selectedSections = []
+      reserveLocked = false
 
-      } catch (e) {
-        showAlert("เกิดข้อผิดพลาด")
-      }
+      updateActionButton()
+      await loadAvailableSections()
+
+    } catch (e) {
+      showAlert("เกิดข้อผิดพลาด", "error")
     }
+
+    closeConfirm()
+  }
+
+  popup.classList.remove("hidden")
+  popup.classList.add("flex")
+}
+
     function getMaxSectionsAllowed() {
 
       const input = document.getElementById("parcelAmount")
