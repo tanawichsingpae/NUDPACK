@@ -109,11 +109,28 @@ def login_page():
     return FileResponse(str(CLIENT_STATIC / "login_client.html"))
 
 @app.get("/logout")
-def logout(request: Request):
-    request.session.clear()
-    response = RedirectResponse("/login_client", status_code=302)
+def logout(request: Request, db: Session = Depends(get_db)):
 
-    # กัน cache
+    carrier_id = request.session.get("carrier_id")
+    user_id = request.session.get("user_id")
+    today = thai_now().strftime("%Y%m%d")
+
+    if carrier_id and user_id:
+        reservations = db.query(QueueReservation).filter(
+            QueueReservation.carrier_id == carrier_id,
+            QueueReservation.user_id == user_id,
+            QueueReservation.date == today,
+            QueueReservation.status == "active"
+        ).all()
+
+        for r in reservations:
+            r.status = "unactive"
+
+        db.commit()
+
+    request.session.clear()
+
+    response = RedirectResponse("/login_client", status_code=302)
     response.headers["Cache-Control"] = "no-store"
     response.headers["Pragma"] = "no-cache"
 
@@ -1640,6 +1657,13 @@ def reserve_section(
 
 class CancelIn(BaseModel):
     section_ids: list[int]
+
+
+from sqlalchemy import cast, Integer
+
+class CancelIn(BaseModel):
+    section_ids: list[int]
+
 @app.post("/api/queue/cancel")
 def cancel_reservation(
     payload: CancelIn,
@@ -1647,6 +1671,8 @@ def cancel_reservation(
     db: Session = Depends(get_db)
 ):
     carrier_id = request.session.get("carrier_id")
+    user_id = request.session.get("user_id")
+
     if not carrier_id:
         raise HTTPException(401, "not logged in")
 
@@ -1655,37 +1681,42 @@ def cancel_reservation(
 
     for sid in payload.section_ids:
 
+        # 🔎 หา reservation ล่าสุดของ user ใน section นี้
         reservation = db.query(QueueReservation).filter(
             QueueReservation.section_id == sid,
             QueueReservation.date == today,
             QueueReservation.carrier_id == carrier_id,
-            QueueReservation.user_id == request.session.get("user_id"),
+            QueueReservation.user_id == user_id,
             QueueReservation.status.in_(["active", "unactive", "full"])
         ).order_by(QueueReservation.id.desc()).first()
 
         if not reservation:
             continue
 
-        # 1️⃣ ลบ parcel ที่ยังรอ
+        # 1️⃣ ลบพัสดุที่ยัง "กำลังรอ" ของ carrier นี้ใน section นี้
         db.query(Parcel).filter(
             Parcel.section_id == sid,
             Parcel.carrier_id == carrier_id,
             Parcel.status == "กำลังรอ"
         ).delete(synchronize_session=False)
-        db.flush()  # ให้ DB update ก่อนนับใหม่
 
-        # 2️⃣ หา queue ล่าสุดที่เหลืออยู่ใน section นี้
+        db.flush()  # ให้ DB update ก่อนคำนวณใหม่
+
+        # 2️⃣ คำนวณ current_seq ใหม่จากพัสดุที่ยังเหลือจริง
         last_parcel = db.query(Parcel).filter(
             Parcel.section_id == sid,
-            Parcel.user_id == request.session.get("user_id")
-        ).order_by(Parcel.queue_number.desc()).first()
+            Parcel.carrier_id == carrier_id,
+            Parcel.status != "กำลังรอ"
+        ).order_by(
+            cast(Parcel.queue_number, Integer).desc()
+        ).first()
 
         if last_parcel:
             reservation.current_seq = int(last_parcel.queue_number)
         else:
             reservation.current_seq = reservation.start_seq - 1
 
-        # 3️⃣ เปลี่ยนเป็น unactive แทนการลบ (เก็บ history current_seq ไว้)
+        # 3️⃣ ปลด reservation
         reservation.status = "unactive"
 
         deleted += 1
