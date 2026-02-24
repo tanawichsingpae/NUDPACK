@@ -445,7 +445,7 @@ hover:bg-red-100 active:scale-95 transition">
 
         // ✅ Reset scan input
         scanInput.value = ""
-        scanInput.focus()
+
 
         beep()
 
@@ -736,82 +736,74 @@ ${new Date(p.created_at).toLocaleString("th-TH", { timeZone: "Asia/Bangkok" })}
 
       visibleSections.forEach(s => {
 
-
         const card = document.createElement("div")
         const isSelected = selectedSections.includes(s.id)
         const isLimitReached = selectedSections.length >= maxAllowed
 
+        // ✅ คำนวณ full จากตัวเลขแทน
+        const current = (s.current_seq ?? (s.start_seq - 1))
+        const isFull = current >= s.end_seq
+
         let baseColor = ""
         let selectedColor = ""
 
-        if (s.status === "available") {
+        if (isFull) {
+          baseColor = "bg-white text-gray-400 cursor-not-allowed border"
+        }
+        else if (s.status === "blocked") {
+          baseColor = "bg-gray-200 text-gray-500 cursor-not-allowed"
+        }
+        else if (s.status === "mine") {
+          baseColor = "bg-yellow-200 hover:bg-yellow-300"
+          selectedColor = "bg-yellow-500 text-black"
+        }
+        else {
           baseColor = "bg-green-200 hover:bg-green-300"
           selectedColor = "bg-green-500 text-white"
         }
 
-        if (s.status === "mine") {
-          baseColor = "bg-yellow-200 hover:bg-yellow-300"
-          selectedColor = "bg-yellow-500 text-black"
-        }
-
-        if (s.status === "blocked") {
-          baseColor = "bg-gray-200 text-gray-500 cursor-not-allowed"
-        }
-        if (s.status === "full") {
-          baseColor = "bg-white-200 text-white-600 cursor-not-allowed"
-        }
-
-
-
-
         card.className = `
-      ${isSelected ? selectedColor : baseColor}
-      rounded-xl
-      shadow-sm
-      transition
-      duration-150
-      p-2 md:p-4
-      text-center
-      text-xs md:text-base
-      font-medium
-      ${s.status !== "blocked" ? "cursor-pointer" : ""}
-    `
+          ${isSelected ? selectedColor : baseColor}
+          rounded-xl
+          shadow-sm
+          transition
+          duration-150
+          p-2 md:p-4
+          text-center
+          text-xs md:text-base
+          font-medium
+          ${(!isFull && s.status !== "blocked") ? "cursor-pointer" : ""}
+        `
 
         // 🔥 disable ถ้าเกิน limit
         if (!isSelected && isLimitReached) {
           card.classList.add("opacity-40", "pointer-events-none")
         }
+
         let remainText
         let remainClass = "text-500 font-semibold"
 
-        if (s.status === "full") {
-
+        if (isFull) {
           remainText = "ไม่เหลือคิวว่าง"
-
         } else {
-
-          const current = (s.current_seq ?? (s.start_seq - 1))
-
           const remainStart = current + 1
           remainText = `เหลือ ${remainStart}-${s.end_seq}`
         }
 
-
         card.innerHTML = `
-  <div class="font-bold text-sm md:text-lg">
-    ${s.start_seq}-${s.end_seq}
-  </div>
+          <div class="font-bold text-sm md:text-lg">
+            ${s.start_seq}-${s.end_seq}
+          </div>
 
-  <div class="text-xs md:text-sm mt-1 ${remainClass}">
-    ${remainText}
-  </div>
-`
+          <div class="text-xs md:text-sm mt-1 ${remainClass}">
+            ${remainText}
+          </div>
+        `
 
-
-        if (s.status === "available" || s.status === "mine") {
+        // ✅ กดได้เฉพาะที่ไม่ full และไม่ blocked
+        if (!isFull && (s.status === "available" || s.status === "mine")) {
           card.onclick = () => selectSection(s.id)
         }
-
 
         grid.appendChild(card)
       })
@@ -1105,19 +1097,22 @@ ${new Date(p.created_at).toLocaleString("th-TH", { timeZone: "Asia/Bangkok" })}
     }
     function confirmAllCheck() {
 
-      const required = parseInt(document.getElementById("parcelAmount").value || 0)
-      const scanned = preview.length
+  const message =
+    "หากยืนยันแล้วจะไม่สามารถกลับมาใช้ section เดิมได้"
 
-      const message =
+  document.getElementById("confirmTitle").innerText = "ยืนยันการอัปโหลด"
+  document.getElementById("confirmMessage").innerText = message
 
-        `หากยืนยันแล้วจะไม่สามารถกลับมาใช้ section เดิมได้`
+  const popup = document.getElementById("confirmPopup")
+  const confirmBtn = popup.querySelector("button.bg-red-500")
 
-      document.getElementById("confirmMessage").innerText = message
+  // 🔥 reset ปุ่มกลับเป็น confirmAll
+  confirmBtn.innerText = "ยืนยัน"
+  confirmBtn.onclick = confirmAll
 
-      const popup = document.getElementById("confirmPopup")
-      popup.classList.remove("hidden")
-      popup.classList.add("flex")
-    }
+  popup.classList.remove("hidden")
+  popup.classList.add("flex")
+}
 
     function closeConfirm() {
       const popup = document.getElementById("confirmPopup")

@@ -802,7 +802,9 @@ hover:bg-red-100 active:scale-95 transition">
               pendingVerification = {
                 tracking: info.tracking,
                 queue: info.queue_number || info.queue || '',
+                created_at: info.created_at || null,
                 recipient: recipientName,
+
                 ts: Date.now()
               };
               renderPendingBox();
@@ -848,6 +850,10 @@ hover:bg-red-100 active:scale-95 transition">
   <div>
     <span class="text-gray-400">เลขคิว</span><br>
     <span class="font-medium">${escapeHtml(pendingVerification.queue)}</span>
+  </div>
+  <div>
+    <span class="text-gray-400">วันที่</span><br>
+    <span class="font-medium">${new Date(pendingVerification.created_at).toLocaleString("th-TH", { timeZone: "Asia/Bangkok" })}</span>
   </div>
 </div>
 
@@ -1180,11 +1186,13 @@ hover:bg-red-100 active:scale-95 transition">
 
           currentReportData = sdata.items || [];
           renderReportTable(currentReportData);
-document.getElementById('summary').innerHTML = `
-  <div class="w-full bg-white rounded-xl shadow-sm border border-slate-100
-              grid grid-cols-3 divide-x divide-slate-100">
 
-    <div class="px-6 py-5 flex flex-col items-center justify-center">
+          document.getElementById('summary').innerHTML = `
+  <div class="bg-white rounded-xl shadow-sm border border-slate-100
+              flex divide-x divide-slate-100 overflow-hidden">
+
+    <!-- Check-in -->
+    <div class="flex-1 px-5 py-4">
       <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
         พัสดุเข้า
       </p>
@@ -1193,12 +1201,13 @@ document.getElementById('summary').innerHTML = `
           move_to_inbox
         </span>
         <span class="text-2xl font-bold text-slate-900">
-          ${sdata?.checkin ?? 0}
+          ${sdata.checkin}
         </span>
       </div>
     </div>
 
-    <div class="px-6 py-5 flex flex-col items-center justify-center">
+    <!-- Check-out -->
+    <div class="flex-1 px-5 py-4">
       <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
         พัสดุออก
       </p>
@@ -1207,12 +1216,13 @@ document.getElementById('summary').innerHTML = `
           outbox
         </span>
         <span class="text-2xl font-bold text-slate-900">
-          ${sdata?.checkout ?? 0}
+          ${sdata.checkout}
         </span>
       </div>
     </div>
 
-    <div class="px-6 py-5 flex flex-col items-center justify-center">
+    <!-- Remaining -->
+    <div class="flex-1 px-5 py-4">
       <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
         คงเหลือ
       </p>
@@ -1221,13 +1231,13 @@ document.getElementById('summary').innerHTML = `
           inventory_2
         </span>
         <span class="text-2xl font-bold text-slate-900">
-          ${sdata?.remaining ?? 0}
+          ${sdata.remaining}
         </span>
       </div>
     </div>
 
   </div>
-`;
+`
 
           const tres = await fetch(
             `/api/reports/timeseries?period=daily&start=${start}&end=${end}`,

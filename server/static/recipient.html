@@ -580,6 +580,7 @@ function confirmRecipientPickup(tracking, recipientName) {
           pendingVerification = {
   tracking: info.tracking,
   queue: info.queue_number || info.queue || '',
+  created_at: info.created_at || null,
   recipient: window.recipientName || '',
   ts: Date.now()
 };
@@ -626,6 +627,10 @@ function confirmRecipientPickup(tracking, recipientName) {
   <div>
     <span class="text-gray-400">เลขคิว</span><br>
     <span class="font-medium">${escapeHtml(pendingVerification.queue)}</span>
+  </div>
+  <div>
+    <span class="text-gray-400">วันที่</span><br>
+    <span class="font-medium">${new Date(pendingVerification.created_at).toLocaleString("th-TH", { timeZone: "Asia/Bangkok" })}</span>
   </div>
 </div>
 
