@@ -132,20 +132,33 @@ hover:bg-red-100 active:scale-95 transition">
 <div id="cameraOverlay" class="fixed inset-0 bg-black/70 hidden z-50 flex items-center justify-center">
 
   <div class="bg-white rounded-2xl p-4 w-80 shadow-xl relative">
-    
-    <!-- ปุ่มกากบาท -->
-    <button onclick="stopCamera()" 
-            class="absolute top-3 right-3 text-gray-500 hover:text-red-500 text-xl font-bold">
-      &times;
+
+    <!-- switch camera -->
+    <button onclick="switchCamera()"
+    class="absolute top-3 left-3 z-[10001]
+    bg-white rounded-full p-2 shadow hover:bg-gray-100">
+
+      <span class="material-symbols-outlined">
+        cameraswitch
+      </span>
+
     </button>
 
-    <div class="text-sm font-semibold mb-2 text-center text-gray-700">
-      สแกน QR code
-    </div>
+    <!-- close -->
+    <button onclick="stopCamera()"
+    class="absolute top-3 right-3 z-[10001]
+    text-gray-600 hover:text-red-500 text-2xl font-bold">
 
-    <div id="reader"></div>
+      &times;
+
+    </button>
+
+    <!-- reader -->
+    <div id="reader"
+    class="relative z-[10000] mt-8"></div>
 
   </div>
+
 </div>
 
 
@@ -353,19 +366,35 @@ hover:bg-red-100 active:scale-95 transition">
 
   </div>
 </div>
-  <!-- Confirm Camera Overlay -->
-<div id="confirmCameraOverlay" class="fixed inset-0 bg-black/70 hidden z-50 flex items-center justify-center">
+<!-- Confirm Camera Overlay -->
+<div id="confirmCameraOverlay"
+     class="fixed inset-0 bg-black/70 hidden z-50 flex items-center justify-center">
 
   <div class="bg-white rounded-2xl p-4 w-80 shadow-xl relative">
 
-    <!-- ปุ่มกากบาท -->
-    <button 
-      onclick="stopConfirmCamera()" 
-      class="absolute top-3 right-3 text-gray-500 hover:text-red-500 text-2xl font-bold">
+    <!-- ปุ่มสลับกล้อง -->
+    <!-- ปุ่มสลับกล้อง -->
+    <!-- switch camera -->
+    <button onclick="switchConfirmCamera()"
+    class="absolute top-3 left-3 z-[10001]
+    bg-white rounded-full p-2 shadow hover:bg-gray-100">
+
+      <span class="material-symbols-outlined">
+        cameraswitch
+      </span>
+
+    </button>
+
+    <!-- ปุ่มปิด -->
+    <button onclick="stopConfirmCamera()"
+      class="absolute top-3 right-3 z-[9999]
+      text-gray-500 hover:text-red-500 text-2xl font-bold">
       &times;
     </button>
 
-    <div id="confirmReader" class="mt-6"></div>
+    <div id="confirmReader"
+         class="mt-6 relative overflow-hidden rounded-xl">
+    </div>
 
   </div>
 
@@ -458,10 +487,17 @@ hover:bg-red-100 active:scale-95 transition">
 
     // scanners (ต้องอยู่บนสุดก่อน function ใด ๆ)
     let mainScanner = null;
+    let cameras = []
+    let currentCameraIndex = 0
+    let currentFacingMode = "environment" // เริ่มกล้องหลัง
+
+    let confirmCameras = []
+    let confirmCameraIndex = 0
+    let confirmFacingMode = "environment"
     let confirmScanner = null;
     let cameraLocked = false;
     let confirmStopping = false
-let confirming = false
+    let confirming = false
 
 async function confirmPickup(tracking) {
   if (confirming) return
@@ -1250,32 +1286,39 @@ function renderReportTable(items) {
 
 
 
-    function startCamera() {
+    async function startCamera() {
 
-      if (mainScanner) return
-      document.getElementById("cameraOverlay").classList.remove("hidden")
-      cameraLocked = false
-      mainScanner = new Html5Qrcode("reader")
+  if (mainScanner) return
 
-      Html5Qrcode.getCameras().then(cams => {
+  document.getElementById("cameraOverlay").classList.remove("hidden")
 
-        if (!cams.length) return alert("ไม่พบกล้อง")
+  cameraLocked = false
+  mainScanner = new Html5Qrcode("reader")
 
-        const camId = cams[cams.length - 1].id
+  try {
 
-        mainScanner.start(
-          camId,
-          { fps: 10, qrbox: 220 },
-          txt => {
-            if (cameraLocked) return
-            cameraLocked = true
+    await mainScanner.start(
+      { facingMode: currentFacingMode },
+      { fps: 10, qrbox: 220 },
+      txt => {
 
-            handleScan(txt.trim())
-            setTimeout(stopCamera, 400)
-          }
-        )
-      }).catch(e => alert(e))
-    }
+        if (cameraLocked) return
+        cameraLocked = true
+
+        handleScan(txt.trim())
+
+        setTimeout(stopCamera, 400)
+      }
+    )
+
+  } catch (e) {
+
+    alert("เปิดกล้องไม่สำเร็จ")
+    mainScanner = null
+
+  }
+
+}
 
 
     function stopCamera() {
@@ -1290,59 +1333,107 @@ function renderReportTable(items) {
       })
     }
 
+    async function switchCamera() {
 
+  if (!mainScanner) return
 
+  currentFacingMode =
+    currentFacingMode === "environment"
+      ? "user"
+      : "environment"
 
-    async function startCameraConfirm() {
+  try {
 
-      if (confirmScanner || confirmStopping) return
+    await mainScanner.stop()
 
-      const recipientInput = document.getElementById('pendingRecipientInput')
+    await mainScanner.start(
+      { facingMode: currentFacingMode },
+      { fps: 10, qrbox: 220 },
+      txt => {
 
-      if (!recipientInput || !recipientInput.value.trim()) {
-        openRecipientPopup()
-        return
+        if (cameraLocked) return
+
+        cameraLocked = true
+
+        handleScan(txt.trim())
+
+        setTimeout(stopCamera, 400)
+
       }
-      document.getElementById("confirmCameraOverlay").classList.remove("hidden")
+    )
 
-      cameraLocked = false
-      setStatus('')
+  } catch (e) {
 
-      confirmScanner = new Html5Qrcode("confirmReader")
+    alert("สลับกล้องไม่สำเร็จ")
 
-      const cams = await Html5Qrcode.getCameras()
+  }
 
-      if (!cams.length) {
-        alert("ไม่พบกล้อง")
-        confirmScanner = null
-        return
-      }
+}
 
-      const camId = cams[cams.length - 1].id
 
-      await confirmScanner.start(
-        camId,
-        { fps: 10, qrbox: 250 },
-        async txt => {
+async function startCameraConfirm() {
 
-          if (cameraLocked) return
-          cameraLocked = true
+  if (confirmScanner || confirmStopping) return
 
-          const scanned = txt.trim()
+  const recipientInput =
+    document.getElementById('pendingRecipientInput')
 
-          if (pendingVerification && scanned === pendingVerification.tracking) {
+  if (!recipientInput || !recipientInput.value.trim()) {
+    openRecipientPopup()
+    return
+  }
 
-            const recipientToSend = recipientInput.value.trim()
-            doConfirmPickup(scanned, recipientToSend)
+  document.getElementById("confirmCameraOverlay")
+    .classList.remove("hidden")
 
-          } else {
-            openMismatchPopup()
-          }
+  cameraLocked = false
+  setStatus('')
 
-          await stopConfirmCamera()
+  confirmScanner = new Html5Qrcode("confirmReader")
+
+  try {
+
+    await confirmScanner.start(
+      { facingMode: confirmFacingMode }, // ✅ ใช้แบบเดียวกับ mainCamera
+      {
+        fps: 10,
+        qrbox: 250
+      },
+      async txt => {
+
+        if (cameraLocked) return
+        cameraLocked = true
+
+        const scanned = txt.trim()
+
+        if (
+          pendingVerification &&
+          scanned === pendingVerification.tracking
+        ) {
+
+          const recipientToSend =
+            recipientInput.value.trim()
+
+          doConfirmPickup(scanned, recipientToSend)
+
+        } else {
+          openMismatchPopup()
         }
-      )
-    }
+
+        await stopConfirmCamera()
+
+      }
+    )
+
+  }
+  catch (err) {
+
+    alert("เปิดกล้องไม่สำเร็จ")
+    confirmScanner = null
+
+  }
+
+}
     async function stopConfirmCamera() {
 
       if (!confirmScanner) return
@@ -1361,7 +1452,55 @@ function renderReportTable(items) {
       document.getElementById("confirmCameraOverlay").classList.add("hidden")
     }
 
+async function switchConfirmCamera() {
 
+  if (!confirmScanner) return
+
+  confirmFacingMode =
+    confirmFacingMode === "environment"
+      ? "user"
+      : "environment"
+
+  await confirmScanner.stop()
+
+  confirmScanner = new Html5Qrcode("confirmReader")
+
+  await confirmScanner.start(
+    { facingMode: confirmFacingMode },
+    {
+      fps: 10,
+      qrbox: 250
+    },
+    async txt => {
+
+      if (cameraLocked) return
+      cameraLocked = true
+
+      const recipientInput =
+        document.getElementById('pendingRecipientInput')
+
+      const scanned = txt.trim()
+
+      if (
+        pendingVerification &&
+        scanned === pendingVerification.tracking
+      ) {
+
+        doConfirmPickup(
+          scanned,
+          recipientInput.value.trim()
+        )
+
+      } else {
+        openMismatchPopup()
+      }
+
+      await stopConfirmCamera()
+
+    }
+  )
+
+}
 
     /* popup helpers */
     function showPopup(q, t) {
