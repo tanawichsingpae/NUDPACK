@@ -568,8 +568,10 @@ def get_parcel(tracking: str):
         tracking_clean = normalize_tracking_value(tracking)
 
         p = db.query(Parcel).filter(
-            normalize_tracking_column(Parcel.tracking_number) == tracking_clean
+            normalize_tracking_column(Parcel.tracking_number)
+            == tracking_clean
         ).first()
+
         if not p:
             raise HTTPException(status_code=404, detail="not found")
         return {
@@ -603,8 +605,10 @@ def pickup_parcel(
         tracking_clean = normalize_tracking_value(tracking)
 
         p = db.query(Parcel).filter(
-            normalize_tracking_column(Parcel.tracking_number) == tracking_clean
+            normalize_tracking_column(Parcel.tracking_number)
+            == tracking_clean
         ).first()
+
         if not p:
             raise HTTPException(404, "parcel not found")
 
@@ -706,11 +710,12 @@ def recipient_list_parcels(
                     )
 
                 if recipient:
-                    like = f"%{recipient}%"
+                    recipient_clean = normalize_tracking_value(recipient)
+
                     conditions.append(
                         or_(
-                            Parcel.recipient_name.ilike(like),
-                            Parcel.unofficial_recipient.ilike(like),
+                            normalize_tracking_column(Parcel.recipient_name).like(f"%{recipient_clean}%"),
+                            normalize_tracking_column(Parcel.unofficial_recipient).like(f"%{recipient_clean}%"),
                         )
                     )
 
@@ -851,14 +856,11 @@ from sqlalchemy import func
 def verify_parcel(tracking: str):
     db = SessionLocal()
     try:
-        tracking_clean = tracking.strip().replace(" ", "").lower()
+        tracking_clean = normalize_tracking_value(tracking)
 
         p = db.query(Parcel).filter(
-            func.replace(
-                func.lower(Parcel.tracking_number),
-                " ",
-                ""
-            ) == tracking_clean
+            normalize_tracking_column(Parcel.tracking_number)
+            == tracking_clean
         ).first()
 
         if not p:
@@ -888,7 +890,8 @@ def confirm_pickup(
         tracking_clean = normalize_tracking_value(tracking)
 
         p = db.query(Parcel).filter(
-            normalize_tracking_column(Parcel.tracking_number) == tracking_clean
+            normalize_tracking_column(Parcel.tracking_number)
+            == tracking_clean
         ).first()
 
         if not p:
@@ -992,8 +995,10 @@ def confirm_pickup_recipient(
         tracking_clean = normalize_tracking_value(tracking)
 
         p = db.query(Parcel).filter(
-            normalize_tracking_column(Parcel.tracking_number) == tracking_clean
+            normalize_tracking_column(Parcel.tracking_number)
+            == tracking_clean
         ).first()
+
         if not p:
             raise HTTPException(status_code=404, detail="parcel not found")
 
@@ -1406,8 +1411,11 @@ def bulk_delete_parcels(
 @app.delete("/api/parcels/{tracking}")
 def delete_parcel(tracking: str, db: Session = Depends(get_db)):
 
+    tracking_clean = normalize_tracking_value(tracking)
+
     parcel = db.query(Parcel).filter(
-        Parcel.tracking_number == tracking
+        normalize_tracking_column(Parcel.tracking_number)
+        == tracking_clean
     ).first()
 
     if not parcel:

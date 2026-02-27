@@ -683,6 +683,13 @@ hover:bg-red-100 active:scale-95 transition">
     let confirmStopping = false
     let confirming = false
 
+    function normalizeTracking(str) {
+  if (!str) return '';
+  return str
+    .toLowerCase()
+    .replace(/\s+/g, '')
+    .trim();
+}
         async function confirmPickup(tracking) {
           if (confirming) return
           confirming = true
@@ -708,6 +715,7 @@ hover:bg-red-100 active:scale-95 transition">
         });
 
         async function handleScan(value) {
+          value = normalizeTracking(value);
           if (!value) return;
           // first scan -> verify
           if (!pendingVerification) {
@@ -823,7 +831,10 @@ hover:bg-red-100 active:scale-95 transition">
                 return
               }
               function confirmAdminPickup(tracking, recipientName) {
-                fetch(`/api/parcels/${encodeURIComponent(tracking)}/confirm_pickup`, {
+
+                const trackingClean = normalizeTracking(tracking); // normalize
+
+                fetch(`/api/parcels/${encodeURIComponent(trackingClean)}/confirm_pickup`, {
                   method: "POST",
                   credentials: "include",
                   headers: { "Content-Type": "application/json" },
@@ -840,7 +851,8 @@ hover:bg-red-100 active:scale-95 transition">
 
               const recipientName = info.recipient_name ?? info.recipient ?? '';
               pendingVerification = {
-                tracking: info.tracking,
+                tracking: normalizeTracking(info.tracking),
+                trackingRaw: info.tracking,
                 queue: info.queue_number || info.queue || '',
                 created_at: info.created_at || null,
                 recipient: recipientName,
@@ -861,13 +873,27 @@ hover:bg-red-100 active:scale-95 transition">
           }
 
           // second scan -> if matches, perform confirm using recipient in pending box
-          if (value === pendingVerification.tracking) {
+
+          const scanned = normalizeTracking(value);
+          const expected = normalizeTracking(pendingVerification.tracking);
+
+          if (scanned === expected) {
+
             const recipientInput = document.getElementById('pendingRecipientInput');
-            const recipientToSend = recipientInput ? recipientInput.value.trim() : (pendingVerification.recipient || '');
+
+            const recipientToSend =
+              recipientInput?.value.trim() ||
+              pendingVerification.recipient ||
+              '';
+
             await doConfirmPickup(pendingVerification.tracking, recipientToSend);
+
             return;
+
           } else {
-            openMismatchPopup()
+
+            openMismatchPopup();
+
           }
         }
 
@@ -883,9 +909,25 @@ hover:bg-red-100 active:scale-95 transition">
   <!-- Parcel Info -->
 <div class="rounded-xl border bg-slate-50 p-3 text-xs space-y-1">
   <div>
-    <span class="text-gray-400">Tracking</span><br>
-    <span class="font-medium">${escapeHtml(pendingVerification.tracking)}</span>
-  </div>
+  <span class="text-gray-400">Tracking</span><br>
+
+  <span
+    data-tracking="${escapeAttr(pendingVerification.tracking)}"
+    onclick="copyPendingTracking(this)"
+    class="font-medium cursor-pointer hover:text-orange-500 active:text-orange-600 inline-flex items-center gap-1"
+    title="คลิกเพื่อคัดลอก">
+
+    <span class="trackingText">
+      ${escapeHtml(pendingVerification.tracking)}
+    </span>
+
+    <span class="material-symbols-outlined text-[14px] opacity-60">
+      content_copy
+    </span>
+
+  </span>
+
+</div>
 
   <div>
     <span class="text-gray-400">เลขคิว</span><br>
@@ -1634,7 +1676,7 @@ async function startCameraConfirm() {
         if (cameraLocked) return
         cameraLocked = true
 
-        const scanned = txt.trim()
+        const scanned = normalizeTracking(txt)
 
         if (
           pendingVerification &&
@@ -2001,6 +2043,24 @@ ${recipientHtml}
           closeConfirmModal();
           await removeSelected();
         }
+        function copyPendingTracking(el) {
+
+        const tracking = el.dataset.tracking;
+        if (!tracking) return;
+
+        navigator.clipboard.writeText(tracking);
+
+        const textEl = el.querySelector(".trackingText");
+
+        textEl.innerText = "คัดลอกแล้ว";
+        el.classList.add("text-green-600");
+
+        setTimeout(() => {
+          textEl.innerText = tracking;
+          el.classList.remove("text-green-600");
+        }, 1000);
+
+      }
         function toggleExportMenu() {
           const menu = document.getElementById('exportMenu');
           menu.classList.toggle('hidden');

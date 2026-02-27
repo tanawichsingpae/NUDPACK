@@ -372,8 +372,6 @@ hover:bg-red-100 active:scale-95 transition">
 
   <div class="bg-white rounded-2xl p-4 w-80 shadow-xl relative">
 
-    <!-- ปุ่มสลับกล้อง -->
-    <!-- ปุ่มสลับกล้อง -->
     <!-- switch camera -->
     <button onclick="switchConfirmCamera()"
     class="absolute top-3 left-3 z-[10001]
@@ -498,7 +496,13 @@ hover:bg-red-100 active:scale-95 transition">
     let cameraLocked = false;
     let confirmStopping = false
     let confirming = false
-
+function normalizeTracking(str) {
+  if (!str) return '';
+  return str
+    .toLowerCase()
+    .replace(/\s+/g, '')
+    .trim();
+}
 async function confirmPickup(tracking) {
   if (confirming) return
   confirming = true
@@ -612,9 +616,10 @@ function confirmRecipientPickup(tracking, recipientName) {
     closeAlreadyPopup()
   })
 }
-
+      
           pendingVerification = {
-  tracking: info.tracking,
+  tracking: normalizeTracking(info.tracking),
+  trackingRaw: info.tracking,
   queue: info.queue_number || info.queue || '',
   created_at: info.created_at || null,
   recipient: window.recipientName || '',
@@ -634,15 +639,28 @@ function confirmRecipientPickup(tracking, recipientName) {
       }
 
       // second scan -> if matches, perform confirm using recipient in pending box
-      if (value === pendingVerification.tracking) {
-        const recipientInput = document.getElementById('pendingRecipientInput');
-        const recipientToSend = recipientInput ? recipientInput.value.trim() : (pendingVerification.recipient || '');
-        await doConfirmPickup(pendingVerification.tracking, recipientToSend);
-        return;
-      } else {
-        openMismatchPopup()
-      }
-    }
+      const scanned = normalizeTracking(value);
+          const expected = normalizeTracking(pendingVerification.tracking);
+
+          if (scanned === expected) {
+
+            const recipientInput = document.getElementById('pendingRecipientInput');
+
+            const recipientToSend =
+              recipientInput?.value.trim() ||
+              pendingVerification.recipient ||
+              '';
+
+            await doConfirmPickup(pendingVerification.tracking, recipientToSend);
+
+            return;
+
+          } else {
+
+            openMismatchPopup();
+
+          }
+        }
 
     /* ---------- Render pending verification box ---------- */
     function renderPendingBox() {
@@ -655,10 +673,26 @@ function confirmRecipientPickup(tracking, recipientName) {
 
   <!-- Parcel Info -->
 <div class="rounded-xl border bg-slate-50 p-3 text-xs space-y-1">
-  <div>
-    <span class="text-gray-400">Tracking</span><br>
-    <span class="font-medium">${escapeHtml(pendingVerification.tracking)}</span>
-  </div>
+<div>
+  <span class="text-gray-400">Tracking</span><br>
+
+  <span
+    data-tracking="${escapeAttr(pendingVerification.tracking)}"
+    onclick="copyPendingTracking(this)"
+    class="font-medium cursor-pointer hover:text-orange-500 active:text-orange-600 inline-flex items-center gap-1"
+    title="คลิกเพื่อคัดลอก">
+
+    <span class="trackingText">
+      ${escapeHtml(pendingVerification.tracking)}
+    </span>
+
+    <span class="material-symbols-outlined text-[14px] opacity-60">
+      content_copy
+    </span>
+
+  </span>
+
+</div>
 
   <div>
     <span class="text-gray-400">เลขคิว</span><br>
@@ -738,7 +772,11 @@ function confirmRecipientPickup(tracking, recipientName) {
 
       function updatePendingControls() {
         const a = (recipientField.value || '').trim().length > 0;
-        const b = (confirmField.value || '').trim().length > 0 && (confirmField.value.trim() === pendingVerification.tracking);
+
+        const b =
+          normalizeTracking(confirmField.value) ===
+          normalizeTracking(pendingVerification.tracking);
+
         confirmBtn.disabled = !(a && b);
       }
 
@@ -1404,7 +1442,7 @@ async function startCameraConfirm() {
         if (cameraLocked) return
         cameraLocked = true
 
-        const scanned = txt.trim()
+        const scanned = normalizeTracking(txt)
 
         if (
           pendingVerification &&
@@ -1775,6 +1813,24 @@ function closeConfirmModal() {
 async function confirmDelete() {
   closeConfirmModal();
   await removeSelected();
+}
+function copyPendingTracking(el) {
+
+  const tracking = el.dataset.tracking;
+  if (!tracking) return;
+
+  navigator.clipboard.writeText(tracking);
+
+  const textEl = el.querySelector(".trackingText");
+
+  textEl.innerText = "คัดลอกแล้ว";
+  el.classList.add("text-green-600");
+
+  setTimeout(() => {
+    textEl.innerText = tracking;
+    el.classList.remove("text-green-600");
+  }, 1000);
+
 }
 function toggleExportMenu() {
   const menu = document.getElementById('exportMenu');
