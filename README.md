@@ -1,171 +1,175 @@
-NUDPACK – Parcel Management & Tracking System
-1. บทนำ
+# 📦 NUDPACK – Dormitory Parcel Management System
 
-NUDPACK เป็นระบบบริหารจัดการพัสดุ (Parcel Management System) ที่พัฒนาในรูปแบบ Web Application เพื่อรองรับการจัดการข้อมูลพัสดุ การตรวจสอบสถานะ และการทำงานร่วมกันระหว่างผู้ดูแลระบบ (Admin), ลูกค้า (Client) และผู้รับพัสดุ (Recipient)
+ระบบจัดการพัสดุสำหรับ **หอพักนิสิต มหาวิทยาลัยนเรศวร**
+พัฒนาขึ้นเพื่อแก้ปัญหาการรับ–จ่ายพัสดุที่ล่าช้า ข้อมูลตกหล่น และตรวจสอบย้อนหลังได้ยาก
 
-ระบบถูกออกแบบให้รองรับกระบวนการทำงานจริงในบริบทของการจัดส่งพัสดุ ทั้งในระดับองค์กรหรือหน่วยงาน โดยเน้นความถูกต้องของข้อมูล ความปลอดภัย และความสามารถในการตรวจสอบย้อนหลัง (Audit Trail)
+---
 
-2. วัตถุประสงค์ของโครงการ
+## 📌 ภาพรวมระบบ (Overview)
 
-พัฒนาระบบบริหารจัดการข้อมูลพัสดุแบบรวมศูนย์
+NUDPACK เป็น Web Application สำหรับบริหารจัดการพัสดุภายในหอพัก
+รองรับการทำงานของหลายบทบาท ได้แก่ **Admin, Client และ Recipient**
 
-ลดข้อผิดพลาดในการบันทึกและตรวจสอบข้อมูลการจัดส่ง
+> 🎯 จุดประสงค์หลัก: ทำให้การจัดการพัสดุ “เป็นระบบ ตรวจสอบได้ และลดความผิดพลาด”
 
-รองรับการยืนยันตัวตนหลายบทบาท (Multi-role Authentication)
+---
 
-รองรับการ Export รายงานในรูปแบบไฟล์ Excel
+## 🎯 ปัญหาที่ต้องการแก้ (Problem Statement)
 
-เพิ่มความสามารถในการตรวจสอบประวัติการดำเนินงาน (Audit Log)
+* ข้อมูลพัสดุจดบันทึกแบบ Manual → เกิดความผิดพลาด
+* ผู้รับไม่สามารถตรวจสอบสถานะพัสดุได้
+* ไม่มีระบบติดตามย้อนหลัง (Audit)
+* การค้นหาพัสดุใช้เวลานาน
 
-3. เทคโนโลยีที่ใช้ (Technology Stack)
-3.1 Backend
+---
 
-FastAPI – Web framework หลักสำหรับพัฒนา REST API
+## ✨ ฟีเจอร์หลัก (Key Features)
 
-Uvicorn – ASGI Server
+* 🔐 ระบบ Login แยกตามบทบาท (Role-based Authentication)
+* 📦 บันทึกข้อมูลพัสดุ (Tracking Number, Carrier, Status)
+* 🚚 รองรับหลายบริษัทขนส่ง (DHL, Flash, J&T, KEX, SPX ฯลฯ)
+* 📊 Export รายงานเป็น Excel
+* 🧾 ระบบ Audit Log (ตรวจสอบประวัติการแก้ไข)
+* 🔍 ค้นหาและตรวจสอบสถานะพัสดุ
 
-SQLAlchemy – ORM สำหรับจัดการฐานข้อมูล
+---
 
-PostgreSQL – ระบบฐานข้อมูลหลัก
+## 👥 บทบาทผู้ใช้งาน (User Roles)
 
-Pydantic – Data validation
+### 🛠️ Admin
 
-Passlib (bcrypt) – เข้ารหัสรหัสผ่าน
+* จัดการข้อมูลพัสดุทั้งหมด
+* ตรวจสอบสถานะ
+* ดู Audit Log
+* Export รายงาน
 
-Jinja2 – Template engine สำหรับหน้า Admin
+### 🧑 Client (เจ้าหน้าที่/ผู้ดูแลหอ)
 
-3.2 Frontend
+* บันทึกและจัดการพัสดุ
+* ตรวจสอบข้อมูลพัสดุ
 
-HTML, CSS, JavaScript
+### 📬 Recipient (นิสิต)
 
-Static Assets สำหรับ UI และโลโก้บริษัทขนส่ง
+* ตรวจสอบสถานะพัสดุของตนเอง
 
-3.3 Reporting
+---
 
-Pandas
+## 🛠️ เทคโนโลยีที่ใช้ (Tech Stack)
 
-OpenPyXL (สำหรับ Export Excel)
+### Backend
 
-4. โครงสร้างโปรเจค (Project Structure)
+* FastAPI
+* PostgreSQL
+* SQLAlchemy
+* Uvicorn
+* Pydantic
+* Passlib (bcrypt)
+
+### Frontend
+
+* HTML / CSS / JavaScript
+
+### Reporting
+
+* Pandas
+* OpenPyXL
+
+---
+
+## 📁 โครงสร้างโปรเจค (Project Structure)
+
+```bash
 NUDPACK-main/
 │
-├── client/                 # ฝั่งหน้าเว็บผู้ใช้งาน
-│   ├── static/
-│   │   ├── carriers/       # โลโก้บริษัทขนส่ง
-│   │   ├── login_*.html
-│   │   └── client.html
-│
+├── client/                # หน้าเว็บผู้ใช้งาน
 ├── server/
-│   ├── app/
-│   │   ├── main.py         # Entry point ของระบบ
-│   │   ├── api.py          # REST API endpoints
-│   │   ├── models.py       # Database models
-│   │   ├── db.py           # Database configuration
-│   │   ├── admin_auth.py   # ระบบยืนยันตัวตนผู้ดูแล
-│   │   └── utils.py        # ฟังก์ชันช่วยเหลือ
-│   │
-│   ├── templates/          # HTML Templates (Admin)
-│   └── static/             # Static files สำหรับฝั่ง server
+│   ├── app/              # Backend (API + Logic)
+│   ├── templates/        # Admin UI
+│   └── static/
 │
 ├── requirements.txt
 └── README.md
-5. บทบาทผู้ใช้งาน (User Roles)
-5.1 Admin
+```
 
-จัดการข้อมูลพัสดุ
+---
 
-ตรวจสอบสถานะการจัดส่ง
+## ⚙️ การติดตั้ง (Installation)
 
-ดู Audit Log
-
-Export รายงานเป็นไฟล์ Excel
-
-5.2 Client
-
-ตรวจสอบข้อมูลพัสดุของตนเอง
-
-ดูสถานะการจัดส่ง
-
-5.3 Recipient
-
-ตรวจสอบสถานะพัสดุ
-
-ยืนยันการรับพัสดุ (ถ้ามีการพัฒนาเพิ่มเติมใน logic)
-
-6. ฟีเจอร์หลักของระบบ
-
-ระบบ Login แยกตามบทบาทผู้ใช้งาน
-
-บันทึกข้อมูลพัสดุ (Tracking Number, Carrier, สถานะ ฯลฯ)
-
-รองรับบริษัทขนส่งหลายราย (เช่น DHL, FLASH, J&T, KEX, SPX ฯลฯ)
-
-ระบบ Audit สำหรับติดตามประวัติการแก้ไขข้อมูล
-
-Export รายงานเป็นไฟล์ Excel
-
-การเข้ารหัสรหัสผ่านด้วย bcrypt
-
-7. การติดตั้งและใช้งาน (Installation Guide)
-7.1 Clone Repository
+```bash
 git clone <repository-url>
 cd NUDPACK-main
-7.2 สร้าง Virtual Environment
+
 python -m venv venv
 source venv/bin/activate      # macOS / Linux
 venv\Scripts\activate         # Windows
-7.3 ติดตั้ง Dependencies
+
 pip install -r requirements.txt
-7.4 ตั้งค่าฐานข้อมูล
+```
 
-แก้ไขค่าการเชื่อมต่อฐานข้อมูลในไฟล์:
+---
 
+## 🗄️ ตั้งค่าฐานข้อมูล
+
+แก้ไขไฟล์:
+
+```
 server/app/db.py
+```
 
-ตัวอย่าง PostgreSQL:
+ตัวอย่าง:
 
+```env
 DATABASE_URL = "postgresql://user:password@localhost:5432/nudpack_db"
-7.5 รันระบบ
+```
+
+---
+
+## ▶️ การรันระบบ
+
+```bash
 uvicorn server.app.main:app --reload
+```
 
-จากนั้นเข้าใช้งานผ่าน:
+เข้าใช้งาน:
 
+```
 http://127.0.0.1:8000
-8. ความปลอดภัย (Security Considerations)
+```
 
-รหัสผ่านถูกเข้ารหัสด้วย bcrypt
+---
 
-ใช้ ORM ลดความเสี่ยง SQL Injection
+## 🔐 ความปลอดภัย (Security)
 
-แยกสิทธิ์การเข้าถึงตาม Role
+* เข้ารหัสรหัสผ่านด้วย bcrypt
+* ใช้ ORM ลดความเสี่ยง SQL Injection
+* แยกสิทธิ์ตาม Role
+* มีระบบ Audit Trail ตรวจสอบย้อนหลัง
 
-รองรับการตรวจสอบการเปลี่ยนแปลงข้อมูล (Audit Trail)
+---
 
-9. การประยุกต์ใช้งานในสถานการณ์จริง
+## 🏫 การใช้งานจริง (Use Case)
 
-ระบบนี้สามารถนำไปใช้ใน:
+เหมาะสำหรับ:
 
-หน่วยงานที่มีการรับ–ส่งพัสดุภายในองค์กร
+* หอพักนิสิต / มหาวิทยาลัย
+* คอนโด / อพาร์ตเมนต์
+* หน่วยงานที่มีจุดรับพัสดุส่วนกลาง
 
-จุดรับพัสดุคอนโด / หอพัก
+---
 
-ระบบบริหารพัสดุสำหรับบริษัทขนาดเล็ก–กลาง
+## 🚀 แนวทางพัฒนาต่อ (Future Improvements)
 
-ระบบต้นแบบสำหรับขยายเป็น Real-time Parcel Tracking
+* 🔔 ระบบแจ้งเตือน (Notification)
+* 📱 รองรับ QR / Barcode
+* 🔗 เชื่อม API บริษัทขนส่ง
+* 📊 Dashboard วิเคราะห์ข้อมูล
+* ☁️ Deploy บน Cloud (Docker, Railway, Render)
 
-10. แนวทางการพัฒนาเพิ่มเติม (Future Improvements)
+---
 
-เพิ่มระบบแจ้งเตือน (Notification)
+## 👨‍💻 ผู้พัฒนา
 
-เชื่อมต่อ API บริษัทขนส่งโดยตรง
+โปรเจคนี้พัฒนาจาก Requirement จริง
+เพื่อแก้ปัญหาการจัดการพัสดุภายในหอพักนิสิต และสามารถต่อยอดเป็นระบบ Production ได้
 
-รองรับการสแกน QR Code / Barcode
-
-เพิ่ม Dashboard วิเคราะห์ข้อมูล (Data Analytics)
-
-รองรับ Deployment บน Cloud (เช่น Railway, Render, Docker)
-
-11. ผู้พัฒนา
-
-พัฒนาเพื่อการศึกษาและการประยุกต์ใช้งานจริงด้านระบบบริหารจัดการพัสดุ
-โครงสร้างออกแบบให้สามารถต่อยอดเป็น Production System ได้
+---
