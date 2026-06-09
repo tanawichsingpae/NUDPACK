@@ -253,9 +253,11 @@ def audit_page(request: Request):
         return RedirectResponse("/login_admin")
 
     return templates.TemplateResponse(
-        "audit.html",
-        {"request": request}
-    )
+    request=request,
+    name="audit.html",
+    context={}
+)
+
 # Startup: init DB
 @app.on_event("startup")
 def on_startup():
