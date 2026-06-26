@@ -139,6 +139,20 @@ hover:bg-red-100 active:scale-95 transition">
               </span>
               Audit Log
             </button>
+
+            <!-- เส้นคั่น -->
+            <div class="h-px bg-gray-100 my-1"></div>
+
+            <!-- พัสดุตกค้าง -->
+            <button onclick="openStrandedPage()" class="flex items-center gap-3 w-full
+           px-4 py-3 text-sm font-medium text-gray-700
+           hover:bg-orange-50 hover:text-orange-600
+           transition duration-150">
+              <span class="material-symbols-outlined text-[18px]">
+                inventory_2
+              </span>
+              พัสดุตกค้าง
+            </button>
           </div>
 
         </div>
@@ -205,25 +219,18 @@ hover:bg-red-100 active:scale-95 transition">
       <div class="flex gap-2 items-center flex-wrap">
 
         <!-- queue search -->
-        <input id="queueSearch"
-       placeholder="ค้นหาเลขคิว"
-       class="border px-3 py-2 rounded-xl text-sm w-24">
+        <input id="queueSearch" placeholder="ค้นหาเลขคิว" class="border px-3 py-2 rounded-xl text-sm w-24">
 
         <!-- recipient search -->
-        <input id="recipientSearch"
-       placeholder="ค้นหาชื่อหน้ากล่อง"
-       class="border px-3 py-2 rounded-xl text-sm w-32">
-        
-        <!-- search button -->
-        <input id="dateFilter"
-       type="date"
-       class="hidden">
+        <input id="recipientSearch" placeholder="ค้นหาชื่อหน้ากล่อง" class="border px-3 py-2 rounded-xl text-sm w-32">
 
-<button type="button"
-        onclick="openCalendar()"
-        class="bg-orange-500 hover:bg-orange-600 transition text-white px-4 py-2 rounded-xl text-sm shadow">
-    ค้นหา
-</button>
+        <!-- search button -->
+        <input id="dateFilter" type="date" class="hidden">
+
+        <button type="button" onclick="openCalendar()"
+          class="bg-orange-500 hover:bg-orange-600 transition text-white px-4 py-2 rounded-xl text-sm shadow">
+          ค้นหา
+        </button>
 
       </div>
 
@@ -509,8 +516,8 @@ hover:bg-red-100 active:scale-95 transition">
         <div class="pt-6 text-center">
           <div class="mx-auto w-14 h-14 rounded-full bg-red-50 flex items-center justify-center">
             <span class="material-symbols-outlined text-red-500 text-3xl">
-  error
-</span>
+              error
+            </span>
           </div>
         </div>
 
@@ -546,6 +553,67 @@ hover:bg-red-100 active:scale-95 transition">
 
 
   </main>
+  <!-- ================= Stranded Page ================= -->
+  <div id="strandedPage" class="fixed inset-0 bg-[#fafafa] hidden overflow-y-auto z-50">
+
+    <header class="sticky top-0 bg-white border-b p-4 z-30">
+      <div class="max-w-xl mx-auto relative flex items-center">
+        <button onclick="closeStrandedPage()" class="size-9 rounded-full bg-slate-100
+             flex items-center justify-center
+             hover:bg-slate-200 transition">
+          <span class="material-symbols-outlined text-slate-700">arrow_back</span>
+        </button>
+        <h1 class="absolute left-1/2 -translate-x-1/2 text-base font-semibold text-slate-800">
+          พัสดุตกค้าง
+        </h1>
+        <!-- Export button (right side) -->
+        <button onclick="exportStrandedParcels()"
+          class="ml-auto flex items-center gap-1 bg-orange-500 hover:bg-orange-600
+                 active:scale-95 transition text-white text-sm font-medium
+                 px-3 py-2 rounded-xl shadow">
+          <span class="material-symbols-outlined text-[18px]">download</span>
+          Excel
+        </button>
+      </div>
+    </header>
+
+    <div class="max-w-xl mx-auto p-4">
+
+      <!-- Filter -->
+      <div class="flex gap-2 mb-4 items-center">
+        <select id="strandedDaysSelect" onchange="onStrandedSelectChange()" class="appearance-none rounded-xl border border-gray-300 bg-white
+                 px-4 py-2 text-sm font-medium text-gray-700
+                 shadow-sm transition
+                 hover:border-orange-300
+                 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-orange-400">
+          <option value="1">1 วัน</option>
+          <option value="30" selected>30 วัน</option>
+          <option value="60">60 วัน</option>
+          <option value="180">180 วัน</option>
+          <option value="custom">กำหนดเอง...</option>
+        </select>
+
+        <!-- Custom days input (hidden by default) -->
+        <div id="strandedCustomWrap" class="hidden flex items-center gap-2">
+          <input id="strandedCustomDays" type="number" min="1" placeholder="ระบุวัน" class="border rounded-xl px-3 py-2 text-sm w-24
+                   focus:ring-2 focus:ring-orange-400 focus:outline-none" />
+          <button onclick="applyCustomStrandedDays()" class="bg-orange-500 hover:bg-orange-600 text-white text-sm px-3 py-2 rounded-xl shadow
+                   active:scale-95 transition">
+            ค้นหา
+          </button>
+        </div>
+      </div>
+
+      <!-- Summary card -->
+      <div id="strandedSummary" class="mb-4"></div>
+
+      <!-- List grouped by date -->
+      <div id="strandedList"></div>
+
+    </div>
+  </div>
+  <!-- ================= /Stranded Page ================= -->
+
   <div id="reportPage" class="fixed inset-0 bg-[#fafafa] hidden overflow-y-auto z-50">
 
     <header class="sticky top-0 bg-white border-b p-4 z-30">
@@ -866,12 +934,12 @@ hover:bg-red-100 active:scale-95 transition">
                         <div class="text-gray-400">เวลาได้รับ</div>
                         <div class="text-[11px]">
                           ${escapeHtml(
-                                    info.picked_up_at
-                                      ? new Date(info.picked_up_at).toLocaleString("th-TH", {
-                                        timeZone: "Asia/Bangkok",
-                                      })
-                                      : "-"
-                                  )}
+                  info.picked_up_at
+                    ? new Date(info.picked_up_at).toLocaleString("th-TH", {
+                      timeZone: "Asia/Bangkok",
+                    })
+                    : "-"
+                )}
                         </div>
                       </div>
                     </div>
@@ -1071,7 +1139,10 @@ hover:bg-red-100 active:scale-95 transition">
         }
 
         /* ---------- Search ---------- */
-        document.getElementById('searchInput').addEventListener('keypress', (e) => { if (e.key === 'Enter') doSearch(); });
+        const _searchInputEl = document.getElementById('searchInput');
+        if (_searchInputEl) {
+          _searchInputEl.addEventListener('keypress', (e) => { if (e.key === 'Enter') doSearch(); });
+        }
         async function doSearch() {
           const q = document.getElementById('searchInput').value.trim();
           if (!q) return alert('Please input tracking or queue');
@@ -1191,17 +1262,19 @@ hover:bg-red-100 active:scale-95 transition">
           e.selectedIndex = arr.length - 1;
         }
 
-        document.getElementById('r_period')
-          .addEventListener('change', async () => {
+        const _rPeriodEl = document.getElementById('r_period');
+        if (_rPeriodEl) {
+          _rPeriodEl.addEventListener('change', async () => {
             await loadReportValues();
 
             // เลือกเดือนแรกอัตโนมัติ
             const sel = document.getElementById('r_periodValues');
-            if (sel.options.length > 0) sel.selectedIndex = 0;
+            if (sel && sel.options.length > 0) sel.selectedIndex = 0;
 
             // โหลด report ทันที
             loadReport();
           });
+        }
 
         /* ---------- load report ---------- */
         function compact(d) {
@@ -1518,7 +1591,10 @@ hover:bg-red-100 active:scale-95 transition">
         }
 
         /* initialize report values on load */
-        window.addEventListener('load', () => { if (document.querySelector('.tabBtn.active').dataset.tab === 'reports') initReports(); });
+        window.addEventListener('load', () => {
+          const activeTab = document.querySelector('.tabBtn.active');
+          if (activeTab && activeTab.dataset.tab === 'reports') initReports();
+        });
 
 
 
@@ -1977,6 +2053,170 @@ ${recipientHtml}
           reportPage.classList.add("hidden")
           adminPage.classList.remove("hidden")
         }
+
+        /* ============================================================
+           Stranded Page
+        ============================================================ */
+        let currentStrandedDays = 30;
+
+        async function openStrandedPage() {
+          console.log("[stranded] openStrandedPage called");
+          document.getElementById("moreMenu").classList.add("hidden");
+          adminPage.classList.add("hidden");
+          document.getElementById("strandedPage").classList.remove("hidden");
+
+          // reset dropdown to default
+          const sel = document.getElementById("strandedDaysSelect");
+          sel.value = "30";
+          document.getElementById("strandedCustomWrap").classList.add("hidden");
+          currentStrandedDays = 30;
+
+          await loadStrandedParcels(currentStrandedDays);
+        }
+
+        function closeStrandedPage() {
+          document.getElementById("strandedPage").classList.add("hidden");
+          adminPage.classList.remove("hidden");
+        }
+
+        function exportStrandedParcels() {
+          window.location.href = `/api/reports/stranded/export?days=${currentStrandedDays}`;
+        }
+
+        function onStrandedSelectChange() {
+          const sel = document.getElementById("strandedDaysSelect");
+          const customWrap = document.getElementById("strandedCustomWrap");
+
+          if (sel.value === "custom") {
+            customWrap.classList.remove("hidden");
+            document.getElementById("strandedCustomDays").focus();
+            return;
+          }
+
+          customWrap.classList.add("hidden");
+          currentStrandedDays = parseInt(sel.value);
+          loadStrandedParcels(currentStrandedDays);
+        }
+
+        function applyCustomStrandedDays() {
+          const input = document.getElementById("strandedCustomDays");
+          const val = parseInt(input.value);
+          if (!val || val < 1) {
+            alert("กรุณาระบุจำนวนวัน (ตั้งแต่ 1 ขึ้นไป)");
+            return;
+          }
+          currentStrandedDays = val;
+          loadStrandedParcels(val);
+        }
+
+        // Enter key on custom input
+        document.addEventListener("DOMContentLoaded", () => {
+          const customInput = document.getElementById("strandedCustomDays");
+          if (customInput) {
+            customInput.addEventListener("keypress", (e) => {
+              if (e.key === "Enter") applyCustomStrandedDays();
+            });
+          }
+        });
+
+        async function loadStrandedParcels(days) {
+          const summaryEl = document.getElementById("strandedSummary");
+          const listEl = document.getElementById("strandedList");
+
+          summaryEl.innerHTML = `<div class="text-sm text-gray-400 text-center py-4">กำลังโหลด...</div>`;
+          listEl.innerHTML = "";
+
+          try {
+            console.log(`[stranded] fetching /api/reports/stranded?days=${days}`);
+            const res = await fetch(`/api/reports/stranded?days=${days}`, { credentials: "include" });
+            console.log(`[stranded] response status: ${res.status}`);
+            if (!res.ok) throw new Error(`โหลดข้อมูลไม่สำเร็จ (status ${res.status})`);
+            const data = await res.json();
+            console.log("[stranded] data:", data);
+
+            // --- Summary card ---
+            const label = `${days} วัน`;
+            summaryEl.innerHTML = `
+              <div class="bg-red-50 border border-red-200 rounded-xl p-4 flex items-center gap-3">
+                <span class="material-symbols-outlined text-red-500 text-[28px]">warning</span>
+                <div>
+                  <div class="text-sm text-red-600 font-medium">พัสดุตกค้างมากกว่า ${label}</div>
+                  <div class="text-2xl font-bold text-red-700">${data.total} ชิ้น</div>
+                </div>
+              </div>`;
+
+            if (data.total === 0) {
+              listEl.innerHTML = `
+                <div class="text-center text-gray-400 text-sm py-10">
+                  <span class="material-symbols-outlined text-[40px] block mb-2">inventory_2</span>
+                  ไม่มีพัสดุตกค้าง
+                </div>`;
+              return;
+            }
+
+            // --- Grouped by date ---
+            const html = data.groups.map(group => {
+              // แปลง YYYY-MM-DD → DD/MM/YYYY (พ.ศ.)
+              const [y, m, d] = group.date.split("-");
+              const be_year = parseInt(y) + 543;
+              const dateLabel = `${d}/${m}/${be_year}`;
+
+              const rows = group.items.map(p => {
+                // badge สีตามจำนวนวันที่ค้าง
+                let badgeCls = "bg-yellow-100 text-yellow-700";
+                if (p.days_stranded >= 180) badgeCls = "bg-red-100 text-red-700";
+                else if (p.days_stranded >= 90) badgeCls = "bg-orange-100 text-orange-700";
+
+                const name = p.unofficial_recipient || p.recipient_name || "-";
+
+                return `
+                  <div class="bg-white rounded-xl border border-gray-100 px-4 py-3 flex flex-col gap-1 shadow-sm">
+                    <div class="flex items-center justify-between">
+                      <span class="text-xs font-mono text-gray-700 break-all">${escapeHtml(p.tracking_number)}</span>
+                      <span class="text-xs px-2 py-0.5 rounded-full font-medium ${badgeCls} ml-2 whitespace-nowrap">
+                        ${p.days_stranded} วัน
+                      </span>
+                    </div>
+                    <!-- ชื่อหน้ากล่อง highlight -->
+                    <div class="flex items-center gap-1.5">
+                      <span class="material-symbols-outlined text-purple-400 text-[15px]">badge</span>
+                      ${name !== "-"
+                        ? `<span class="text-sm font-semibold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-lg border border-purple-200">${escapeHtml(name)}</span>`
+                        : `<span class="text-xs text-gray-400 italic">ไม่ระบุชื่อ</span>`
+                      }
+                    </div>
+                    <div class="flex gap-4 text-xs text-gray-500">
+                      <span>เลขคิว <span class="font-semibold text-gray-700">${escapeHtml(p.queue_number ?? "-")}</span></span>
+                      <span>เข้าเมื่อ: <span class="font-semibold text-gray-700">${formatThaiDate(p.created_at)}</span></span>
+                    </div>
+                  </div>`;
+              }).join("");
+
+              return `
+                <div class="mb-5">
+                  <div class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2 px-1">
+                    วันที่ ${dateLabel}
+                  </div>
+                  <div class="flex flex-col gap-2">${rows}</div>
+                </div>`;
+            }).join("");
+
+            listEl.innerHTML = html;
+
+          } catch (err) {
+            summaryEl.innerHTML = `<div class="text-sm text-red-400 text-center py-4">${err.message}</div>`;
+          }
+        }
+
+        /* helper: ISO string → DD/MM/YYYY+543 */
+        function formatThaiDate(iso) {
+          if (!iso) return "-";
+          const dt = new Date(iso);
+          const d = String(dt.getDate()).padStart(2, "0");
+          const m = String(dt.getMonth() + 1).padStart(2, "0");
+          const y = dt.getFullYear() + 543;
+          return `${d}/${m}/${y}`;
+        }
         function formatSlash(el) {
           if (!el.value) return;
 
@@ -2089,12 +2329,12 @@ ${recipientHtml}
         }
 
         function closeCancelPopup() {
-  cancelTrackingNo = "";
-  document.getElementById("cancelTracking").textContent = "";
+          cancelTrackingNo = "";
+          document.getElementById("cancelTracking").textContent = "";
 
-  cancelPickupPopup.classList.add("hidden");
-  cancelPickupPopup.classList.remove("flex");
-}
+          cancelPickupPopup.classList.add("hidden");
+          cancelPickupPopup.classList.remove("flex");
+        }
         async function confirmCancelPickup() {
 
           try {
@@ -2138,15 +2378,15 @@ ${recipientHtml}
 
         function openCalendar() {
 
-    const input = document.getElementById("dateFilter");
+          const input = document.getElementById("dateFilter");
 
-    input.showPicker();   // เปิดปฏิทิน
+          input.showPicker();   // เปิดปฏิทิน
 
-    input.onchange = () => {
-        loadWaitingParcels();
-    };
+          input.onchange = () => {
+            loadWaitingParcels();
+          };
 
-}
+        }
       </script>
 
       <script>

@@ -253,9 +253,10 @@ def audit_page(request: Request):
         return RedirectResponse("/login_admin")
 
     return templates.TemplateResponse(
-        "audit.html",
-        {"request": request}
-    )
+    request=request,
+    name="audit.html",
+    context={}
+)
 # Startup: init DB
 @app.on_event("startup")
 def on_startup():
@@ -1162,6 +1163,169 @@ def reports_timeseries(period: str = Query("daily", regex="^(daily|monthly|yearl
         return {"labels": labels, "checkin": checkin, "checkout": checkout}
     finally:
         db.close()
+
+@app.get("/api/reports/stranded")
+def stranded_parcels(
+    days: int = Query(180, ge=1),
+    admin=Depends(require_admin)
+):
+    """
+    คืนรายการพัสดุที่ยังไม่ได้รับ (status = 'ยังไม่ได้รับ' หรือ 'กำลังรอ')
+    และค้างมานานกว่า `days` วัน นับจาก created_at
+    จัดกลุ่มตามวันที่เข้า (created_at เป็น YYYY-MM-DD เวลาไทย UTC+7)
+    """
+    db = SessionLocal()
+    try:
+        tz_thai = timezone(timedelta(hours=7))
+        now = thai_now().replace(tzinfo=tz_thai)
+        cutoff = now - timedelta(days=days)
+
+        print(f"[stranded] days={days}, now={now}, cutoff={cutoff}")
+
+        # ก่อน filter status → debug ดูจำนวนทั้งหมด
+        all_uncollected = (
+            db.query(Parcel)
+            .filter(Parcel.status.in_(["ยังไม่ได้รับ", "กำลังรอ"]))
+            .count()
+        )
+        print(f"[stranded] uncollected parcels (no date filter): {all_uncollected}")
+
+        rows = (
+            db.query(Parcel)
+            .filter(
+                Parcel.status.in_(["ยังไม่ได้รับ", "กำลังรอ"]),
+                Parcel.created_at <= cutoff
+            )
+            .order_by(Parcel.created_at.asc())
+            .all()
+        )
+
+        print(f"[stranded] after date filter: {len(rows)} rows")
+
+        # จัดกลุ่มตามวันที่เข้า (key = "YYYY-MM-DD")
+        from collections import defaultdict
+        groups: dict[str, list] = defaultdict(list)
+
+        for p in rows:
+            dt = p.created_at
+            if dt and dt.tzinfo is None:
+                dt = dt.replace(tzinfo=tz_thai)
+            date_key = dt.strftime("%Y-%m-%d") if dt else "unknown"
+            days_stranded = (now - dt).days if dt else 0
+
+            groups[date_key].append({
+                "id": p.id,
+                "tracking_number": p.tracking_number,
+                "queue_number": p.queue_number,
+                "status": p.status,
+                "recipient_name": p.recipient_name,
+                "unofficial_recipient": p.unofficial_recipient,
+                "created_at": dt.isoformat() if dt else None,
+                "days_stranded": days_stranded,
+            })
+
+        result = [
+            {"date": k, "items": v}
+            for k, v in sorted(groups.items())
+        ]
+
+        return {
+            "days_filter": days,
+            "total": len(rows),
+            "groups": result
+        }
+
+    finally:
+        db.close()
+
+@app.get("/api/reports/stranded/export")
+def export_stranded(
+    days: int = Query(30, ge=1),
+    admin=Depends(require_admin)
+):
+    """
+    Export พัสดุตกค้าง (status ยังไม่ได้รับ / กำลังรอ ที่ค้างเกิน days วัน)
+    เป็นไฟล์ XLSX (ถ้า pandas พร้อม) หรือ CSV
+    """
+    db = SessionLocal()
+    try:
+        tz_thai = timezone(timedelta(hours=7))
+        now = thai_now().replace(tzinfo=tz_thai)
+        cutoff = now - timedelta(days=days)
+
+        rows = (
+            db.query(Parcel)
+            .filter(
+                Parcel.status.in_(["ยังไม่ได้รับ", "กำลังรอ"]),
+                Parcel.created_at <= cutoff
+            )
+            .order_by(Parcel.created_at.asc())
+            .all()
+        )
+
+        items = []
+        for p in rows:
+            dt = p.created_at
+            if dt and dt.tzinfo is None:
+                dt = dt.replace(tzinfo=tz_thai)
+            days_stranded = (now - dt).days if dt else 0
+            created_str = dt.strftime("%d/%m/%Y %H:%M") if dt else ""
+            items.append({
+                "เลขคิว": p.queue_number or "",
+                "เลขพัสดุ": p.tracking_number or "",
+                "สถานะ": p.status or "",
+                "ชื่อหน้ากล่อง": p.unofficial_recipient or p.recipient_name or "",
+                "วันที่เข้า": created_str,
+                "จำนวนวันที่ค้าง": days_stranded,
+            })
+    finally:
+        db.close()
+
+    fname_base = f"พัสดุตกค้าง_เกิน_{days}_วัน"
+
+    # ---- XLSX branch ----
+    if PANDAS_AVAILABLE:
+        df = pd.DataFrame(items) if items else pd.DataFrame(columns=[
+            "เลขคิว", "เลขพัสดุ", "สถานะ", "ชื่อหน้ากล่อง", "วันที่เข้า", "จำนวนวันที่ค้าง"
+        ])
+
+        buffer = io.BytesIO()
+        with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
+            # summary rows (2 rows + 1 blank)
+            df.to_excel(writer, index=False, sheet_name="พัสดุตกค้าง", startrow=3)
+            ws = writer.sheets["พัสดุตกค้าง"]
+            ws.cell(row=1, column=1, value="กรองพัสดุที่ค้างมากกว่า (วัน)")
+            ws.cell(row=1, column=2, value=days)
+            ws.cell(row=2, column=1, value="จำนวนรายการทั้งหมด")
+            ws.cell(row=2, column=2, value=len(items))
+            ws.freeze_panes = "A5"
+
+        buffer.seek(0)
+        filename = f"{fname_base}.xlsx"
+        filename_star = quote(filename)
+        return Response(
+            content=buffer.read(),
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f"attachment; filename*=UTF-8''{filename_star}"}
+        )
+
+    # ---- CSV fallback ----
+    buffer = io.StringIO()
+    writer = csv.writer(buffer)
+    writer.writerow(["กรองพัสดุที่ค้างมากกว่า (วัน)", days])
+    writer.writerow(["จำนวนรายการทั้งหมด", len(items)])
+    writer.writerow([])
+    writer.writerow(["เลขคิว", "เลขพัสดุ", "สถานะ", "ชื่อหน้ากล่อง", "วันที่เข้า", "จำนวนวันที่ค้าง"])
+    for r in items:
+        writer.writerow([r["เลขคิว"], r["เลขพัสดุ"], r["สถานะ"],
+                         r["ชื่อหน้ากล่อง"], r["วันที่เข้า"], r["จำนวนวันที่ค้าง"]])
+    filename = f"{fname_base}.csv"
+    filename_star = quote(filename)
+    return Response(
+        content=buffer.getvalue(),
+        media_type="text/csv; charset=utf-8-sig",
+        headers={"Content-Disposition": f"attachment; filename*=UTF-8''{filename_star}"}
+    )
 
 @app.get("/api/reports/export")
 def export_report(
