@@ -86,7 +86,7 @@ def init_db():
         # -----------------------------
         if db.query(QueueSection).count() == 0:
             start = 1
-            for _ in range(20):
+            for _ in range(30):
                 end = start + 49
                 db.add(QueueSection(
                     start_seq=start,
