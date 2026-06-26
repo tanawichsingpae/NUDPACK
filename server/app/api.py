@@ -1281,7 +1281,7 @@ def export_stranded(
     finally:
         db.close()
 
-    fname_base = f"พัสดุตกค้าง_เกิน_{days}_วัน"
+    fname_base = f"พัสดุตกค้างเกิน_{days}_วัน"
 
     # ---- XLSX branch ----
     if PANDAS_AVAILABLE:
