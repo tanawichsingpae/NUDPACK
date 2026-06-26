@@ -171,21 +171,25 @@ hover:bg-red-100 active:scale-95 transition">
       <div class="flex gap-2 items-center flex-wrap">
 
         <!-- queue search -->
-        <input id="queueSearch" placeholder="ค้นหาเลขคิว" class="border px-4 py-2 rounded-xl text-sm w-32 shadow-sm
-             focus:ring-2 focus:ring-orange-400 focus:outline-none">
+        <input id="queueSearch"
+       placeholder="ค้นหาเลขคิว"
+       class="border px-3 py-2 rounded-xl text-sm w-24">
 
         <!-- recipient search -->
-        <input id="recipientSearch" placeholder="ค้นหาชื่อหน้ากล่อง" class="border px-4 py-2 rounded-xl text-sm w-40 shadow-sm
-             focus:ring-2 focus:ring-orange-400 focus:outline-none"> <!-- date -->
-        <input id="dateFilter" type="text" placeholder="เลือกวันที่" onfocus="this.type='date'"
-          onblur="if(!this.value)this.type='text'" class="border px-2 py-2 rounded-lg text-xs shadow-sm w-28
-             focus:ring-2 focus:ring-orange-400 focus:outline-none" />
-
+        <input id="recipientSearch"
+       placeholder="ค้นหาชื่อหน้ากล่อง"
+       class="border px-3 py-2 rounded-xl text-sm w-32">
+        
         <!-- search button -->
-        <button type="button" onclick="loadWaitingParcels()"
-          class="bg-orange-500 hover:bg-orange-600 transition text-white px-4 py-2 rounded-xl text-sm shadow">
-          ค้นหา
-        </button>
+        <input id="dateFilter"
+       type="date"
+       style="position:fixed;left:-9999px;width:1px;height:1px;opacity:0;">
+
+<button type="button"
+        onclick="openCalendar()"
+        class="bg-orange-500 hover:bg-orange-600 transition text-white px-4 py-2 rounded-xl text-sm shadow">
+    ค้นหา
+</button>
 
       </div>
 
@@ -1756,19 +1760,36 @@ document.addEventListener('click', e => {
 });
 function handleSearchClick() {
 
-  const queue = document.getElementById("queueSearch")?.value.trim() || ""
-  const date  = document.getElementById("dateFilter")?.value || ""
-  const status = document.getElementById("statusFilter")?.value || "ทั้งหมด"
+    const queue = document.getElementById("queueSearch").value.trim();
+    const recipient = document.getElementById("recipientSearch").value.trim();
+    const date = document.getElementById("dateFilter").value;
+    const status = document.getElementById("statusFilter")?.value || "ทั้งหมด";
 
-  // ถ้าไม่กรอกอะไรเลย → ไม่ต้องยิง API
-  if (!queue && !date && (status === "ทั้งหมด")) {
-    document.getElementById("parcelList").innerHTML = ""
-    return
-  }
+    if (!queue && !recipient && !date && status === "ทั้งหมด") {
+        document.getElementById("parcelList").innerHTML = "";
+        return;
+    }
 
-  loadWaitingParcels(date)
+    loadWaitingParcels(date);
 }
+function openCalendar() {
 
+    const input = document.getElementById("dateFilter");
+
+    input.value = ""; // ล้างวันที่เก่าก่อน
+
+    input.onchange = () => {
+        loadWaitingParcels();
+    };
+
+    input.focus();
+
+    if (typeof input.showPicker === "function") {
+        input.showPicker();
+    } else {
+        input.click();
+    }
+}
 
   </script>
 

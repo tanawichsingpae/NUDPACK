@@ -63,7 +63,7 @@
 <body class="bg-[#fafafa] font-display" onload="setDefaultToday()">
 
   <header class="sticky top-0 bg-white/80 backdrop-blur border-b p-4">
-    <div class="w-full max-w-xl md:max-w-4xl lg:max-w-6xl mx-auto flex justify-between items-center">
+    <div class="max-w-xl mx-auto flex justify-between items-center">
       <div class="flex gap-3 items-center">
         <img src="/static/NUDPACK_LOGO2.png" class="w-14" />
         <div>
@@ -93,7 +93,7 @@ hover:bg-red-100 active:scale-95 transition">
     </div>
   </header>
 
-  <main id="adminPage" class="w-full max-w-xl md:max-w-4xl lg:max-w-6xl mx-auto">
+  <main id="adminPage" class="max-w-xl mx-auto">
 
     <!-- ================= Scan ================= -->
     <section class="p-4 relative mt-10">
@@ -171,35 +171,32 @@ hover:bg-red-100 active:scale-95 transition">
 
         <div id="cameraOverlay" class="fixed inset-0 bg-black/70 hidden z-50 flex items-center justify-center">
 
-  <div class="bg-white rounded-2xl p-4 w-80 shadow-xl relative">
+          <div class="bg-white rounded-2xl p-4 w-80 shadow-xl relative">
 
-    <!-- switch camera -->
-    <button onclick="switchCamera()"
-    class="absolute top-3 left-3 z-[10001]
+            <!-- switch camera -->
+            <button onclick="switchCamera()" class="absolute top-3 left-3 z-[10001]
     bg-white rounded-full p-2 shadow hover:bg-gray-100">
 
-      <span class="material-symbols-outlined">
-        cameraswitch
-      </span>
+              <span class="material-symbols-outlined">
+                cameraswitch
+              </span>
 
-    </button>
+            </button>
 
-    <!-- close -->
-    <button onclick="stopCamera()"
-    class="absolute top-3 right-3 z-[10001]
+            <!-- close -->
+            <button onclick="stopCamera()" class="absolute top-3 right-3 z-[10001]
     text-gray-600 hover:text-red-500 text-2xl font-bold">
 
-      &times;
+              &times;
 
-    </button>
+            </button>
 
-    <!-- reader -->
-    <div id="reader"
-    class="relative z-[10000] mt-8"></div>
+            <!-- reader -->
+            <div id="reader" class="relative z-[10000] mt-8"></div>
 
-  </div>
+          </div>
 
-</div>
+        </div>
         <div id="scanStatus" class="text-sm mt-2"></div>
 
       </div>
@@ -208,21 +205,25 @@ hover:bg-red-100 active:scale-95 transition">
       <div class="flex gap-2 items-center flex-wrap">
 
         <!-- queue search -->
-        <input id="queueSearch" placeholder="ค้นหาเลขคิว" class="border px-4 py-2 rounded-xl text-sm w-32 shadow-sm
-             focus:ring-2 focus:ring-orange-400 focus:outline-none">
+        <input id="queueSearch"
+       placeholder="ค้นหาเลขคิว"
+       class="border px-3 py-2 rounded-xl text-sm w-24">
 
         <!-- recipient search -->
-        <input id="recipientSearch" placeholder="ค้นหาชื่อหน้ากล่อง" class="border px-4 py-2 rounded-xl text-sm w-40 shadow-sm
-             focus:ring-2 focus:ring-orange-400 focus:outline-none"> <!-- date -->
-        <input id="dateFilter" type="text" placeholder="เลือกวันที่" onfocus="this.type='date'"
-          onblur="if(!this.value)this.type='text'" class="border px-2 py-2 rounded-lg text-xs shadow-sm w-28
-             focus:ring-2 focus:ring-orange-400 focus:outline-none" />
-
+        <input id="recipientSearch"
+       placeholder="ค้นหาชื่อหน้ากล่อง"
+       class="border px-3 py-2 rounded-xl text-sm w-32">
+        
         <!-- search button -->
-        <button type="button" onclick="loadWaitingParcels()"
-          class="bg-orange-500 hover:bg-orange-600 transition text-white px-4 py-2 rounded-xl text-sm shadow">
-          ค้นหา
-        </button>
+        <input id="dateFilter"
+       type="date"
+       class="hidden">
+
+<button type="button"
+        onclick="openCalendar()"
+        class="bg-orange-500 hover:bg-orange-600 transition text-white px-4 py-2 rounded-xl text-sm shadow">
+    ค้นหา
+</button>
 
       </div>
 
@@ -402,36 +403,32 @@ hover:bg-red-100 active:scale-95 transition">
       </div>
     </div>
     <!-- Confirm Camera Overlay -->
-<div id="confirmCameraOverlay"
-     class="fixed inset-0 bg-black/70 hidden z-50 flex items-center justify-center">
+    <div id="confirmCameraOverlay" class="fixed inset-0 bg-black/70 hidden z-50 flex items-center justify-center">
 
-  <div class="bg-white rounded-2xl p-4 w-80 shadow-xl relative">
+      <div class="bg-white rounded-2xl p-4 w-80 shadow-xl relative">
 
-    <!-- switch camera -->
-    <button onclick="switchConfirmCamera()"
-    class="absolute top-3 left-3 z-[10001]
+        <!-- switch camera -->
+        <button onclick="switchConfirmCamera()" class="absolute top-3 left-3 z-[10001]
     bg-white rounded-full p-2 shadow hover:bg-gray-100">
 
-      <span class="material-symbols-outlined">
-        cameraswitch
-      </span>
+          <span class="material-symbols-outlined">
+            cameraswitch
+          </span>
 
-    </button>
+        </button>
 
-    <!-- ปุ่มปิด -->
-    <button onclick="stopConfirmCamera()"
-      class="absolute top-3 right-3 z-[9999]
+        <!-- ปุ่มปิด -->
+        <button onclick="stopConfirmCamera()" class="absolute top-3 right-3 z-[9999]
       text-gray-500 hover:text-red-500 text-2xl font-bold">
-      &times;
-    </button>
+          &times;
+        </button>
 
-    <div id="confirmReader"
-         class="mt-6 relative overflow-hidden rounded-xl">
+        <div id="confirmReader" class="mt-6 relative overflow-hidden rounded-xl">
+        </div>
+
+      </div>
+
     </div>
-
-  </div>
-
-</div>
     <!-- Not Found Popup -->
     <div id="notFoundPopup"
       class="fixed inset-0 hidden bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 px-4">
@@ -468,50 +465,91 @@ hover:bg-red-100 active:scale-95 transition">
 
       </div>
     </div>
-<!-- Success Popup -->
-<div id="successPopup"
-  class="fixed inset-0 hidden bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 px-4">
+    <!-- Success Popup -->
+    <div id="successPopup"
+      class="fixed inset-0 hidden bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 px-4">
 
-  <div class="bg-white rounded-3xl w-full max-w-xs shadow-2xl animate-in fade-in zoom-in duration-150">
+      <div class="bg-white rounded-3xl w-full max-w-xs shadow-2xl animate-in fade-in zoom-in duration-150">
 
-    <!-- Icon -->
-    <div class="pt-7 text-center">
-      <div
-        class="mx-auto w-14 h-14 rounded-full bg-green-50 flex items-center justify-center shadow-inner">
-        <span class="material-symbols-outlined text-green-500 text-3xl">
-          check_circle
-        </span>
+        <!-- Icon -->
+        <div class="pt-7 text-center">
+          <div class="mx-auto w-14 h-14 rounded-full bg-green-50 flex items-center justify-center shadow-inner">
+            <span class="material-symbols-outlined text-green-500 text-3xl">
+              check_circle
+            </span>
+          </div>
+        </div>
+
+        <!-- Content -->
+        <div class="px-5 pt-3 pb-2 text-center">
+          <h3 class="text-base font-semibold text-green-600">
+            รับพัสดุเรียบร้อยแล้ว
+          </h3>
+
+          <div id="successInfo" class="mt-2 text-xs text-gray-500"></div>
+        </div>
+
+        <!-- Action -->
+        <div class="px-5 pb-6 pt-3">
+          <button onclick="closeSuccessPopup()"
+            class="w-full rounded-xl bg-green-500 hover:bg-green-600 py-2.5 text-white text-sm font-medium active:scale-95 transition">
+            ตกลง
+          </button>
+        </div>
+
       </div>
     </div>
+    <!-- Cancel Pickup Popup -->
+    <div id="cancelPickupPopup"
+      class="fixed inset-0 hidden bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 px-4">
 
-    <!-- Content -->
-    <div class="px-5 pt-3 pb-2 text-center">
-      <h3 class="text-base font-semibold text-green-600">
-        รับพัสดุเรียบร้อยแล้ว
-      </h3>
+      <div class="bg-white rounded-3xl w-full max-w-sm shadow-2xl">
 
-      <div id="successInfo"
-        class="mt-2 text-xs text-gray-500"></div>
+        <!-- Icon -->
+        <div class="pt-6 text-center">
+          <div class="mx-auto w-14 h-14 rounded-full bg-red-50 flex items-center justify-center">
+            <span class="material-symbols-outlined text-red-500 text-3xl">
+  error
+</span>
+          </div>
+        </div>
+
+        <!-- Content -->
+        <div class="px-6 pt-4 pb-2 text-center">
+          <h3 class="text-lg font-bold text-gray-800">
+            ยกเลิกการรับพัสดุ
+          </h3>
+
+          <p class="mt-2 text-sm text-gray-500">
+            ต้องการยกเลิกการรับพัสดุนี้ใช่หรือไม่
+          </p>
+
+          <p id="cancelTracking" class="mt-3 font-mono text-xs bg-gray-100 rounded-lg py-2 px-3 break-all">
+          </p>
+        </div>
+
+        <!-- Buttons -->
+        <div class="flex gap-3 px-5 pb-5 pt-4">
+
+          <button onclick="closeCancelPopup()" class="flex-1 py-3 rounded-xl bg-gray-100 text-gray-700 font-semibold">
+            ยกเลิก
+          </button>
+
+          <button onclick="confirmCancelPickup()" class="flex-1 py-3 rounded-xl bg-red-500 text-white font-semibold">
+            ยืนยัน
+          </button>
+
+        </div>
+
+      </div>
     </div>
-
-    <!-- Action -->
-    <div class="px-5 pb-6 pt-3">
-      <button onclick="closeSuccessPopup()"
-        class="w-full rounded-xl bg-green-500 hover:bg-green-600 py-2.5 text-white text-sm font-medium active:scale-95 transition">
-        ตกลง
-      </button>
-    </div>
-
-  </div>
-</div>
-
 
 
   </main>
   <div id="reportPage" class="fixed inset-0 bg-[#fafafa] hidden overflow-y-auto z-50">
 
     <header class="sticky top-0 bg-white border-b p-4 z-30">
-      <div class="w-full max-w-xl md:max-w-4xl lg:max-w-6xl mx-auto relative flex items-center">
+      <div class="max-w-xl mx-auto relative flex items-center">
 
         <!-- Back button -->
         <button onclick="closeReportPage()" class="size-9 rounded-full bg-slate-100
@@ -530,7 +568,7 @@ hover:bg-red-100 active:scale-95 transition">
 
       </div>
     </header>
-    <div class="w-full max-w-xl md:max-w-4xl lg:max-w-6xl mx-auto p-4">
+    <div class="max-w-xl mx-auto p-4">
 
       <!-- Report Controls -->
       <div class="flex gap-2 mb-3">
@@ -667,30 +705,31 @@ hover:bg-red-100 active:scale-95 transition">
           });
         });
 
-    /* ---------- Globals ---------- */
-    let pendingVerification = null;
+        /* ---------- Globals ---------- */
+        let pendingVerification = null;
 
-    // scanners (ต้องอยู่บนสุดก่อน function ใด ๆ)
-    let mainScanner = null;
-    let cameras = []
-    let currentCameraIndex = 0
-    let currentFacingMode = "environment" // เริ่มกล้องหลัง
+        // scanners (ต้องอยู่บนสุดก่อน function ใด ๆ)
+        let mainScanner = null;
+        let cameras = []
+        let currentCameraIndex = 0
+        let currentFacingMode = "environment" // เริ่มกล้องหลัง
 
-    let confirmCameras = []
-    let confirmCameraIndex = 0
-    let confirmFacingMode = "environment"
-    let confirmScanner = null;
-    let cameraLocked = false;
-    let confirmStopping = false
-    let confirming = false
+        let confirmCameras = []
+        let confirmCameraIndex = 0
+        let confirmFacingMode = "environment"
+        let confirmScanner = null;
+        let cameraLocked = false;
+        let confirmStopping = false
+        let confirming = false
+        let cancelTrackingNo = "";
 
-    function normalizeTracking(str) {
-  if (!str) return '';
-  return str
-    .toLowerCase()
-    .replace(/\s+/g, '')
-    .trim();
-}
+        function normalizeTracking(str) {
+          if (!str) return '';
+          return str
+            .toLowerCase()
+            .replace(/\s+/g, '')
+            .trim();
+        }
         async function confirmPickup(tracking) {
           if (confirming) return
           confirming = true
@@ -788,44 +827,57 @@ hover:bg-red-100 active:scale-95 transition">
                 // กรณี: รับแล้ว และมี admin แล้ว
                 // ==================================
                 document.getElementById("alreadyBox").innerHTML = `
-    <div class="rounded-2xl bg-slate-50 p-4 space-y-3 text-xs">
+                  <div class="relative rounded-2xl bg-slate-50 p-4 space-y-3 text-xs">
 
-      <div>
-        <div class="text-gray-400">Tracking</div>
-        <div class="text-sm font-medium">${escapeHtml(info.tracking)}</div>
-      </div>
+                    <button
+                      onclick="openCancelPopup('${escapeHtml(info.tracking)}')"
+                      class="absolute top-3 right-3 px-3 py-1 text-xs font-medium text-red-600 border border-red-500 rounded-lg hover:bg-red-50 transition">
+                      ยกเลิกการรับ
+                    </button>
 
-      <div>
-        <div class="text-gray-400">ผู้รับ</div>
-        <div class="text-sm font-medium">${escapeHtml(info.recipient_name || info.recipient || "-")}</div>
-      </div>
+                    <div class="pr-28">
+                      <div class="text-gray-400">Tracking</div>
+                      <div class="text-sm font-medium">${escapeHtml(info.tracking)}</div>
+                    </div>
 
-      <div class="text-right">
-        <div class="text-gray-400">เจ้าหน้าที่</div>
-        <div class="text-sm font-medium">${escapeHtml(info.admin_staff_name)}</div>
-      </div>
+                    <div>
+                      <div class="text-gray-400">ผู้รับ</div>
+                      <div class="text-sm font-medium">
+                        ${escapeHtml(info.recipient_name || info.recipient || "-")}
+                      </div>
+                    </div>
 
-      <div class="flex justify-between items-center pt-2 border-t">
-        <div>
-          <div class="text-gray-400">เลขคิว</div>
-          <div class="font-medium">
-            ${escapeHtml(info.queue_number || info.queue || "-")}
-          </div>
-        </div>
+                    <div class="text-right">
+                      <div class="text-gray-400">เจ้าหน้าที่</div>
+                      <div class="text-sm font-medium">
+                        ${escapeHtml(info.admin_staff_name)}
+                      </div>
+                    </div>
 
-        <div class="text-right">
-          <div class="text-gray-400">เวลาได้รับ</div>
-          <div class="text-[11px]">
-            ${escapeHtml(
-                  info.picked_up_at
-                    ? new Date(info.picked_up_at).toLocaleString("th-TH", { timeZone: "Asia/Bangkok" })
-                    : "-"
-                )}
-          </div>
-        </div>
-      </div>
-    </div>
-  `
+                    <div class="flex justify-between items-center pt-2 border-t">
+                      <div>
+                        <div class="text-gray-400">เลขคิว</div>
+                        <div class="font-medium">
+                          ${escapeHtml(info.queue_number || info.queue || "-")}
+                        </div>
+                      </div>
+
+                      <div class="text-right">
+                        <div class="text-gray-400">เวลาได้รับ</div>
+                        <div class="text-[11px]">
+                          ${escapeHtml(
+                                    info.picked_up_at
+                                      ? new Date(info.picked_up_at).toLocaleString("th-TH", {
+                                        timeZone: "Asia/Bangkok",
+                                      })
+                                      : "-"
+                                  )}
+                        </div>
+                      </div>
+                    </div>
+
+                  </div>
+                  `;
 
                 openAlreadyPopup()
                 scanInputEl.value = ""
@@ -900,14 +952,14 @@ hover:bg-red-100 active:scale-95 transition">
 
         /* ---------- Render pending verification box ---------- */
         function renderPendingBox() {
-  if (!pendingVerification) {
-    document.getElementById('verifyBox').innerHTML = '';
-    return;
-  }
+          if (!pendingVerification) {
+            document.getElementById('verifyBox').innerHTML = '';
+            return;
+          }
 
-  const rec = pendingVerification.recipient || '';
+          const rec = pendingVerification.recipient || '';
 
-  document.getElementById('verifyBox').innerHTML = `
+          document.getElementById('verifyBox').innerHTML = `
 
 <!-- Parcel Info -->
 <div class="rounded-xl border bg-slate-50 p-3 text-xs space-y-1">
@@ -927,7 +979,7 @@ hover:bg-red-100 active:scale-95 transition">
     <span class="text-gray-400">วันที่</span><br>
     <span class="font-medium">
       ${new Date(pendingVerification.created_at)
-        .toLocaleString("th-TH", { timeZone: "Asia/Bangkok" })}
+              .toLocaleString("th-TH", { timeZone: "Asia/Bangkok" })}
     </span>
   </div>
 </div>
@@ -958,20 +1010,20 @@ hover:bg-red-100 active:scale-95 transition">
 </div>
 `;
 
-  const recipientField = document.getElementById('pendingRecipientInput');
-  const confirmBtn = document.getElementById('pendingConfirmBtn');
+          const recipientField = document.getElementById('pendingRecipientInput');
+          const confirmBtn = document.getElementById('pendingConfirmBtn');
 
-  function updatePendingControls() {
-    confirmBtn.disabled = (recipientField.value || '').trim().length === 0;
-  }
+          function updatePendingControls() {
+            confirmBtn.disabled = (recipientField.value || '').trim().length === 0;
+          }
 
-  recipientField.addEventListener('input', updatePendingControls);
+          recipientField.addEventListener('input', updatePendingControls);
 
-  confirmBtn.addEventListener('click', async () => {
-    const recipientToSend = recipientField.value.trim();
-    await doConfirmPickup(pendingVerification.tracking, recipientToSend);
-  });
-}
+          confirmBtn.addEventListener('click', async () => {
+            const recipientToSend = recipientField.value.trim();
+            await doConfirmPickup(pendingVerification.tracking, recipientToSend);
+          });
+        }
 
         /* ---------- Confirm pickup (send recipient_name with request) ---------- */
         async function doConfirmPickup(tracking, recipientToSend) {
@@ -1470,221 +1522,221 @@ hover:bg-red-100 active:scale-95 transition">
 
 
 
-    async function startCamera() {
+        async function startCamera() {
 
-  if (mainScanner) return
+          if (mainScanner) return
 
-  document.getElementById("cameraOverlay").classList.remove("hidden")
+          document.getElementById("cameraOverlay").classList.remove("hidden")
 
-  cameraLocked = false
-  mainScanner = new Html5Qrcode("reader")
+          cameraLocked = false
+          mainScanner = new Html5Qrcode("reader")
 
-  try {
+          try {
 
-    await mainScanner.start(
-      { facingMode: currentFacingMode },
-      { fps: 10, qrbox: 220 },
-      txt => {
+            await mainScanner.start(
+              { facingMode: currentFacingMode },
+              { fps: 10, qrbox: 220 },
+              txt => {
 
-        if (cameraLocked) return
-        cameraLocked = true
+                if (cameraLocked) return
+                cameraLocked = true
 
-        handleScan(txt.trim())
+                handleScan(txt.trim())
 
-        setTimeout(stopCamera, 400)
-      }
-    )
+                setTimeout(stopCamera, 400)
+              }
+            )
 
-  } catch (e) {
+          } catch (e) {
 
-    alert("เปิดกล้องไม่สำเร็จ")
-    mainScanner = null
+            alert("เปิดกล้องไม่สำเร็จ")
+            mainScanner = null
 
-  }
+          }
 
-}
-
-
-    function stopCamera() {
-      if (!mainScanner) return
-
-      mainScanner.stop().then(() => {
-        mainScanner.clear()
-        mainScanner = null
-        cameraLocked = false
-
-        document.getElementById("cameraOverlay").classList.add("hidden")
-      })
-    }
-
-    async function switchCamera() {
-
-  if (!mainScanner) return
-
-  currentFacingMode =
-    currentFacingMode === "environment"
-      ? "user"
-      : "environment"
-
-  try {
-
-    await mainScanner.stop()
-
-    await mainScanner.start(
-      { facingMode: currentFacingMode },
-      { fps: 10, qrbox: 220 },
-      txt => {
-
-        if (cameraLocked) return
-
-        cameraLocked = true
-
-        handleScan(txt.trim())
-
-        setTimeout(stopCamera, 400)
-
-      }
-    )
-
-  } catch (e) {
-
-    alert("สลับกล้องไม่สำเร็จ")
-
-  }
-
-}
-
-
-async function startCameraConfirm() {
-
-  if (confirmScanner || confirmStopping) return
-
-  const recipientInput =
-    document.getElementById('pendingRecipientInput')
-
-  if (!recipientInput || !recipientInput.value.trim()) {
-    openRecipientPopup()
-    return
-  }
-
-  document.getElementById("confirmCameraOverlay")
-    .classList.remove("hidden")
-
-  cameraLocked = false
-  setStatus('')
-
-  confirmScanner = new Html5Qrcode("confirmReader")
-
-  try {
-
-    await confirmScanner.start(
-      { facingMode: confirmFacingMode }, // ✅ ใช้แบบเดียวกับ mainCamera
-      {
-        fps: 10,
-        qrbox: 250
-      },
-      async txt => {
-
-        if (cameraLocked) return
-        cameraLocked = true
-
-        const scanned = normalizeTracking(txt)
-
-        if (
-          pendingVerification &&
-          scanned === pendingVerification.tracking
-        ) {
-
-          const recipientToSend =
-            recipientInput.value.trim()
-
-          doConfirmPickup(scanned, recipientToSend)
-
-        } else {
-          openMismatchPopup()
         }
 
-        await stopConfirmCamera()
 
-      }
-    )
+        function stopCamera() {
+          if (!mainScanner) return
 
-  }
-  catch (err) {
+          mainScanner.stop().then(() => {
+            mainScanner.clear()
+            mainScanner = null
+            cameraLocked = false
 
-    alert("เปิดกล้องไม่สำเร็จ")
-    confirmScanner = null
+            document.getElementById("cameraOverlay").classList.add("hidden")
+          })
+        }
 
-  }
+        async function switchCamera() {
 
-}
-    async function stopConfirmCamera() {
+          if (!mainScanner) return
 
-      if (!confirmScanner) return
+          currentFacingMode =
+            currentFacingMode === "environment"
+              ? "user"
+              : "environment"
 
-      confirmStopping = true
+          try {
 
-      try {
-        await confirmScanner.stop()
-        confirmScanner.clear()
-      } catch { }
+            await mainScanner.stop()
 
-      confirmScanner = null
-      cameraLocked = false
-      confirmStopping = false
+            await mainScanner.start(
+              { facingMode: currentFacingMode },
+              { fps: 10, qrbox: 220 },
+              txt => {
 
-      document.getElementById("confirmCameraOverlay").classList.add("hidden")
-    }
+                if (cameraLocked) return
 
-async function switchConfirmCamera() {
+                cameraLocked = true
 
-  if (!confirmScanner) return
+                handleScan(txt.trim())
 
-  confirmFacingMode =
-    confirmFacingMode === "environment"
-      ? "user"
-      : "environment"
+                setTimeout(stopCamera, 400)
 
-  await confirmScanner.stop()
+              }
+            )
 
-  confirmScanner = new Html5Qrcode("confirmReader")
+          } catch (e) {
 
-  await confirmScanner.start(
-    { facingMode: confirmFacingMode },
-    {
-      fps: 10,
-      qrbox: 250
-    },
-    async txt => {
+            alert("สลับกล้องไม่สำเร็จ")
 
-      if (cameraLocked) return
-      cameraLocked = true
+          }
 
-      const recipientInput =
-        document.getElementById('pendingRecipientInput')
+        }
 
-      const scanned = txt.trim()
 
-      if (
-        pendingVerification &&
-        scanned === pendingVerification.tracking
-      ) {
+        async function startCameraConfirm() {
 
-        doConfirmPickup(
-          scanned,
-          recipientInput.value.trim()
-        )
+          if (confirmScanner || confirmStopping) return
 
-      } else {
-        openMismatchPopup()
-      }
+          const recipientInput =
+            document.getElementById('pendingRecipientInput')
 
-      await stopConfirmCamera()
+          if (!recipientInput || !recipientInput.value.trim()) {
+            openRecipientPopup()
+            return
+          }
 
-    }
-  )
+          document.getElementById("confirmCameraOverlay")
+            .classList.remove("hidden")
 
-}
+          cameraLocked = false
+          setStatus('')
+
+          confirmScanner = new Html5Qrcode("confirmReader")
+
+          try {
+
+            await confirmScanner.start(
+              { facingMode: confirmFacingMode }, // ✅ ใช้แบบเดียวกับ mainCamera
+              {
+                fps: 10,
+                qrbox: 250
+              },
+              async txt => {
+
+                if (cameraLocked) return
+                cameraLocked = true
+
+                const scanned = normalizeTracking(txt)
+
+                if (
+                  pendingVerification &&
+                  scanned === pendingVerification.tracking
+                ) {
+
+                  const recipientToSend =
+                    recipientInput.value.trim()
+
+                  doConfirmPickup(scanned, recipientToSend)
+
+                } else {
+                  openMismatchPopup()
+                }
+
+                await stopConfirmCamera()
+
+              }
+            )
+
+          }
+          catch (err) {
+
+            alert("เปิดกล้องไม่สำเร็จ")
+            confirmScanner = null
+
+          }
+
+        }
+        async function stopConfirmCamera() {
+
+          if (!confirmScanner) return
+
+          confirmStopping = true
+
+          try {
+            await confirmScanner.stop()
+            confirmScanner.clear()
+          } catch { }
+
+          confirmScanner = null
+          cameraLocked = false
+          confirmStopping = false
+
+          document.getElementById("confirmCameraOverlay").classList.add("hidden")
+        }
+
+        async function switchConfirmCamera() {
+
+          if (!confirmScanner) return
+
+          confirmFacingMode =
+            confirmFacingMode === "environment"
+              ? "user"
+              : "environment"
+
+          await confirmScanner.stop()
+
+          confirmScanner = new Html5Qrcode("confirmReader")
+
+          await confirmScanner.start(
+            { facingMode: confirmFacingMode },
+            {
+              fps: 10,
+              qrbox: 250
+            },
+            async txt => {
+
+              if (cameraLocked) return
+              cameraLocked = true
+
+              const recipientInput =
+                document.getElementById('pendingRecipientInput')
+
+              const scanned = txt.trim()
+
+              if (
+                pendingVerification &&
+                scanned === pendingVerification.tracking
+              ) {
+
+                doConfirmPickup(
+                  scanned,
+                  recipientInput.value.trim()
+                )
+
+              } else {
+                openMismatchPopup()
+              }
+
+              await stopConfirmCamera()
+
+            }
+          )
+
+        }
 
         /* popup helpers */
         function showPopup(q, t) {
@@ -1957,22 +2009,22 @@ ${recipientHtml}
         }
         function copyPendingTracking(el) {
 
-        const tracking = el.dataset.tracking;
-        if (!tracking) return;
+          const tracking = el.dataset.tracking;
+          if (!tracking) return;
 
-        navigator.clipboard.writeText(tracking);
+          navigator.clipboard.writeText(tracking);
 
-        const textEl = el.querySelector(".trackingText");
+          const textEl = el.querySelector(".trackingText");
 
-        textEl.innerText = "คัดลอกแล้ว";
-        el.classList.add("text-green-600");
+          textEl.innerText = "คัดลอกแล้ว";
+          el.classList.add("text-green-600");
 
-        setTimeout(() => {
-          textEl.innerText = tracking;
-          el.classList.remove("text-green-600");
-        }, 1000);
+          setTimeout(() => {
+            textEl.innerText = tracking;
+            el.classList.remove("text-green-600");
+          }, 1000);
 
-      }
+        }
         function toggleExportMenu() {
           const menu = document.getElementById('exportMenu');
           menu.classList.toggle('hidden');
@@ -2025,6 +2077,76 @@ ${recipientHtml}
             menu.classList.add("hidden");
           }
         });
+
+        function openCancelPopup(tracking) {
+          console.log("openCancelPopup", tracking);
+          cancelTrackingNo = tracking;
+
+          document.getElementById("cancelTracking").textContent = tracking;
+
+          cancelPickupPopup.classList.remove("hidden");
+          cancelPickupPopup.classList.add("flex");
+        }
+
+        function closeCancelPopup() {
+  cancelTrackingNo = "";
+  document.getElementById("cancelTracking").textContent = "";
+
+  cancelPickupPopup.classList.add("hidden");
+  cancelPickupPopup.classList.remove("flex");
+}
+        async function confirmCancelPickup() {
+
+          try {
+
+            const res = await fetch(
+              `/api/parcels/${encodeURIComponent(cancelTrackingNo)}/cancel-pickup`,
+              {
+                method: "POST",
+                credentials: "include"
+              }
+            );
+
+            const data = await res.json();
+
+            if (!res.ok) {
+              throw new Error(data.detail || "ยกเลิกไม่สำเร็จ");
+            }
+
+            closeCancelPopup();
+            closeAlreadyPopup();
+            location.reload();
+
+            showAlert(
+              "success",
+              "ยกเลิกสำเร็จ",
+              "ยกเลิกการรับพัสดุเรียบร้อยแล้ว"
+            );
+
+            loadWaitingParcels();
+
+          } catch (err) {
+
+            showAlert(
+              "error",
+              "เกิดข้อผิดพลาด",
+              err.message
+            );
+
+          }
+        }
+
+        function openCalendar() {
+
+    const input = document.getElementById("dateFilter");
+
+    input.showPicker();   // เปิดปฏิทิน
+
+    input.onchange = () => {
+        loadWaitingParcels();
+    };
+
+}
       </script>
 
       <script>

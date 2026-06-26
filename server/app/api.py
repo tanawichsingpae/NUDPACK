@@ -253,11 +253,9 @@ def audit_page(request: Request):
         return RedirectResponse("/login_admin")
 
     return templates.TemplateResponse(
-    request=request,
-    name="audit.html",
-    context={}
-)
-
+        "audit.html",
+        {"request": request}
+    )
 # Startup: init DB
 @app.on_event("startup")
 def on_startup():
@@ -1471,6 +1469,75 @@ def list_carriers():
     finally:
         db.close()
 
+
+@app.post("/api/parcels/{tracking}/cancel-pickup")
+def cancel_pickup(
+    tracking: str,
+    admin = Depends(require_admin)
+):
+    db = SessionLocal()
+
+    try:
+        tracking_clean = normalize_tracking_value(tracking)
+
+        p = db.query(Parcel).filter(
+            normalize_tracking_column(Parcel.tracking_number)
+            == tracking_clean
+        ).first()
+
+        if not p:
+            raise HTTPException(
+                status_code=404,
+                detail="parcel not found"
+            )
+
+
+        # กันยกเลิกถ้ายังไม่ได้รับ
+        if not p.picked_up_at:
+            raise HTTPException(
+                status_code=400,
+                detail="พัสดุนี้ยังไม่ได้ถูกรับ"
+            )
+
+
+        # -----------------------------
+        # คืนสถานะกลับ
+        # -----------------------------
+        p.status = "ยังไม่ได้รับ"
+
+        p.recipient_name = None
+        p.admin_staff_name = None
+        p.picked_up_at = None
+
+
+        db.commit()
+        db.refresh(p)
+
+
+        write_audit(
+            db,
+            entity="พัสดุ",
+            entity_id=p.id,
+            action="ยกเลิกการรับพัสดุ",
+            user=f"เจ้าหน้าที่: {admin['name']}",
+            details=(
+                f"หมายเลขพัสดุ: {p.tracking_number}"
+                f"\nยกเลิกการรับโดย: {admin['name']}"
+            ),
+        )
+
+        db.commit()
+
+
+        return {
+            "ok": True,
+            "message": "ยกเลิกการรับพัสดุเรียบร้อย",
+            "tracking": p.tracking_number
+        }
+
+
+    finally:
+        db.close()
 from sqlalchemy import or_
 
 @app.get("/api/audit_logs")
