@@ -1281,7 +1281,7 @@ def export_stranded(
     finally:
         db.close()
 
-    fname_base = f"พัสดุตกค้างเกิน_{days}_วัน"
+    fname_base = f"พัสดุตกค้าง_เกิน_{days}_วัน"
 
     # ---- XLSX branch ----
     if PANDAS_AVAILABLE:
@@ -2014,4 +2014,113 @@ def cancel_reservation(
     db.commit()
 
     return {"deleted": deleted}
+
+
+# ---------------------------
+# Dashboard today
+# ---------------------------
+@app.get("/api/dashboard/today")
+def dashboard_today(admin=Depends(require_admin)):
+    """
+    รวมข้อมูลสำหรับ Dashboard หน้าภาพรวม ใน 1 call:
+    - KPI วันนี้ (เข้า / รับออก / รอรับ)
+    - แยกตามสถานะ (กำลังรอ / ยังไม่ได้รับ / ได้รับแล้ว)
+    - นับพัสดุรอรับแยกตาม carrier
+    - Section utilization
+    - จำนวนพัสดุตกค้าง >30 วัน (preview)
+    """
+    db = SessionLocal()
+    try:
+        tz_thai = timezone(timedelta(hours=7))
+        now = thai_now()
+        if now.tzinfo is None:
+            now = now.replace(tzinfo=tz_thai)
+
+        # วันนี้ (00:00–23:59 เวลาไทย)
+        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        today_end   = today_start + timedelta(days=1)
+
+        today_parcels = db.query(Parcel).filter(
+            Parcel.created_at >= today_start,
+            Parcel.created_at <  today_end
+        ).all()
+
+        # KPI
+        total_in    = len(today_parcels)
+        total_out   = sum(1 for p in today_parcels if p.status == "ได้รับแล้ว")
+        total_wait  = sum(1 for p in today_parcels if p.status != "ได้รับแล้ว")
+
+        # แยกสถานะ
+        status_pending   = sum(1 for p in today_parcels if p.status == "กำลังรอ")
+        status_waiting   = sum(1 for p in today_parcels if p.status == "ยังไม่ได้รับ")
+        status_done      = total_out
+
+        # นับแยก carrier (เฉพาะพัสดุที่ยังรอรับวันนี้)
+        carrier_counts: dict[int, int] = {}
+        for p in today_parcels:
+            if p.status != "ได้รับแล้ว" and p.carrier_id:
+                carrier_counts[p.carrier_id] = carrier_counts.get(p.carrier_id, 0) + 1
+
+        # ดึงชื่อ carrier
+        carriers = db.query(CarrierList).all()
+        carrier_data = []
+        for c in carriers:
+            cnt = carrier_counts.get(c.carrier_id, 0)
+            carrier_data.append({
+                "carrier_id":   c.carrier_id,
+                "carrier_name": c.carrier_name,
+                "count":        cnt
+            })
+        # เรียงมากไปน้อย
+        carrier_data.sort(key=lambda x: x["count"], reverse=True)
+
+        # Section utilization — เฉพาะพัสดุวันนี้เท่านั้น
+        from sqlalchemy import func as sqlfunc
+        sections = db.query(QueueSection).order_by(QueueSection.start_seq).all()
+        section_data = []
+        for s in sections:
+            total_slots = s.end_seq - s.start_seq + 1
+            used = db.query(sqlfunc.count(Parcel.id)).filter(
+                Parcel.section_id == s.id,
+                Parcel.created_at >= today_start,
+                Parcel.created_at <  today_end
+            ).scalar() or 0
+            pct = round(used / total_slots * 100) if total_slots else 0
+            section_data.append({
+                "id":        s.id,
+                "name":      f"{s.start_seq}–{s.end_seq}",
+                "start_seq": s.start_seq,
+                "end_seq":   s.end_seq,
+                "total":     total_slots,
+                "used":      used,
+                "pct":       pct
+            })
+
+
+        # พัสดุตกค้าง >30 วัน (preview count)
+        cutoff_30 = now - timedelta(days=30)
+        stranded_count = db.query(sqlfunc.count(Parcel.id)).filter(
+            Parcel.status.in_(["ยังไม่ได้รับ", "กำลังรอ"]),
+            Parcel.created_at <= cutoff_30
+        ).scalar() or 0
+
+        return {
+            "kpi": {
+                "total_in":   total_in,
+                "total_out":  total_out,
+                "total_wait": total_wait
+            },
+            "status_breakdown": {
+                "pending":  status_pending,
+                "waiting":  status_waiting,
+                "done":     status_done
+            },
+            "carriers": carrier_data,
+            "sections": section_data,
+            "stranded_30d": stranded_count,
+            "generated_at": now.isoformat()
+        }
+    finally:
+        db.close()
+
 # EOF

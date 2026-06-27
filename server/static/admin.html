@@ -129,6 +129,20 @@ hover:bg-red-100 active:scale-95 transition">
             <!-- เส้นคั่น -->
             <div class="h-px bg-gray-100 my-1"></div>
 
+            <!-- Dashboard -->
+            <button onclick="openDashboardPage()" class="flex items-center gap-3 w-full
+           px-4 py-3 text-sm font-medium text-gray-700
+           hover:bg-orange-50 hover:text-orange-600
+           transition duration-150">
+              <span class="material-symbols-outlined text-[18px]">
+                dashboard
+              </span>
+              ภาพรวมระบบ
+            </button>
+
+            <!-- เส้นคั่น -->
+            <div class="h-px bg-gray-100 my-1"></div>
+
             <!-- Audit Log -->
             <button onclick="openAuditLogPage()" class="flex items-center gap-3 w-full
            px-4 py-3 text-sm font-medium text-gray-700
@@ -567,8 +581,7 @@ hover:bg-red-100 active:scale-95 transition">
           พัสดุตกค้าง
         </h1>
         <!-- Export button (right side) -->
-        <button onclick="exportStrandedParcels()"
-          class="ml-auto flex items-center gap-1 bg-orange-500 hover:bg-orange-600
+        <button onclick="exportStrandedParcels()" class="ml-auto flex items-center gap-1 bg-orange-500 hover:bg-orange-600
                  active:scale-95 transition text-white text-sm font-medium
                  px-3 py-2 rounded-xl shadow">
           <span class="material-symbols-outlined text-[18px]">download</span>
@@ -613,6 +626,115 @@ hover:bg-red-100 active:scale-95 transition">
     </div>
   </div>
   <!-- ================= /Stranded Page ================= -->
+
+  <!-- ================= Dashboard Page ================= -->
+  <div id="dashboardPage" class="fixed inset-0 bg-[#fafafa] hidden overflow-y-auto z-50">
+
+    <!-- Header -->
+    <header class="sticky top-0 bg-white border-b p-4 z-30">
+      <div class="max-w-xl mx-auto relative flex items-center">
+        <button onclick="closeDashboardPage()" class="size-9 rounded-full bg-slate-100
+             flex items-center justify-center hover:bg-slate-200 transition">
+          <span class="material-symbols-outlined text-slate-700">arrow_back</span>
+        </button>
+        <h1 class="absolute left-1/2 -translate-x-1/2 text-base font-semibold text-slate-800">
+          ภาพรวมระบบ
+        </h1>
+        <button onclick="loadDashboard()" id="dashRefreshBtn" class="ml-auto size-9 rounded-full bg-slate-100
+                 flex items-center justify-center hover:bg-slate-200 transition">
+          <span class="material-symbols-outlined text-slate-600 text-[18px]">refresh</span>
+        </button>
+      </div>
+    </header>
+
+    <div class="max-w-xl mx-auto p-4 flex flex-col gap-6">
+
+      <!-- ① KPI วันนี้ -->
+      <div>
+        <p class="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-2">วันนี้</p>
+        <div class="flex gap-2">
+          <div class="flex-1 bg-white border border-gray-100 rounded-xl p-3 shadow-sm min-w-0">
+            <div id="db-kpi-wait" class="text-2xl font-semibold text-primary truncate">—</div>
+            <div class="text-xs text-gray-500 mt-0.5 whitespace-nowrap">รอรับ</div>
+          </div>
+          <div class="flex-1 bg-white border border-gray-100 rounded-xl p-3 shadow-sm min-w-0">
+            <div id="db-kpi-in" class="text-2xl font-semibold text-slate-700 truncate">—</div>
+            <div class="text-xs text-gray-500 mt-0.5 whitespace-nowrap">เข้าทั้งหมด</div>
+          </div>
+          <div class="flex-1 bg-white border border-gray-100 rounded-xl p-3 shadow-sm min-w-0">
+            <div id="db-kpi-out" class="text-2xl font-semibold text-slate-700 truncate">—</div>
+            <div class="text-xs text-gray-500 mt-0.5 whitespace-nowrap">รับออกแล้ว</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ② แยกตามสถานะ -->
+      <div>
+        <p class="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-2">แยกตามสถานะ</p>
+        <div class="bg-white border border-gray-100 rounded-xl shadow-sm divide-y divide-gray-50">
+          <div class="flex items-center justify-between px-4 py-3">
+            <span class="flex items-center gap-2 text-sm text-gray-600">
+              <span class="w-2 h-2 rounded-full bg-gray-400 inline-block"></span>กำลังรอ
+            </span>
+            <span id="db-s-pending" class="text-sm font-semibold text-slate-700">—</span>
+          </div>
+          <div class="flex items-center justify-between px-4 py-3">
+            <span class="flex items-center gap-2 text-sm text-gray-600">
+              <span class="w-2 h-2 rounded-full bg-orange-500 inline-block"></span>ยังไม่ได้รับ
+            </span>
+            <span id="db-s-waiting" class="text-sm font-semibold text-slate-700">—</span>
+          </div>
+          <div class="flex items-center justify-between px-4 py-3">
+            <span class="flex items-center gap-2 text-sm text-gray-600">
+              <span class="w-2 h-2 rounded-full bg-green-500 inline-block"></span>ได้รับแล้ว
+            </span>
+            <span id="db-s-done" class="text-sm font-semibold text-slate-700">—</span>
+          </div>
+        </div>
+      </div>
+
+
+      <!-- ④ Section utilization -->
+      <div>
+        <p class="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-2">Section utilization</p>
+        <div id="db-sections" class="grid grid-cols-5 gap-1.5">
+          <span class="text-xs text-gray-400 col-span-5">กำลังโหลด...</span>
+        </div>
+        <div class="flex gap-4 mt-2">
+          <span class="flex items-center gap-1 text-[10px] text-gray-400">
+            <span class="w-2 h-2 rounded-sm bg-green-200 inline-block"></span>ปกติ &lt;75%
+          </span>
+          <span class="flex items-center gap-1 text-[10px] text-gray-400">
+            <span class="w-2 h-2 rounded-sm bg-yellow-300 inline-block"></span>ใกล้เต็ม 75–99%
+          </span>
+          <span class="flex items-center gap-1 text-[10px] text-gray-400">
+            <span class="w-2 h-2 rounded-sm bg-red-400 inline-block"></span>เต็ม ≥100%
+          </span>
+        </div>
+      </div>
+
+      <!-- ⑤ Shortcut พัสดุตกค้าง -->
+      <div>
+        <p class="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-2">แจ้งเตือน</p>
+        <button id="db-stranded-btn" onclick="goToStranded()" class="w-full flex items-center gap-3 bg-white border border-red-200
+                 rounded-xl px-4 py-3 shadow-sm hover:bg-red-50 transition text-left">
+          <div class="w-9 h-9 rounded-lg bg-red-50 flex items-center justify-center flex-shrink-0">
+            <span class="material-symbols-outlined text-red-500 text-[18px]">warning</span>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="text-sm font-medium text-red-700">พัสดุตกค้าง &gt;30 วัน</div>
+            <div id="db-stranded-sub" class="text-xs text-gray-400 mt-0.5">กำลังโหลด...</div>
+          </div>
+          <span class="material-symbols-outlined text-gray-300 text-[18px]">chevron_right</span>
+        </button>
+      </div>
+
+      <!-- timestamp -->
+      <p id="db-updated" class="text-center text-[11px] text-gray-300 pb-2"></p>
+
+    </div>
+  </div>
+  <!-- ================= /Dashboard Page ================= -->
 
   <div id="reportPage" class="fixed inset-0 bg-[#fafafa] hidden overflow-y-auto z-50">
 
@@ -663,7 +785,7 @@ hover:bg-red-100 active:scale-95 transition">
 
       </div>
 
-      <div id="summary" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6"></div>
+      <div id="summary" class="grid grid-cols-3 gap-4 mb-6"> </div>
 
       <canvas id="summaryChart" height="160"></canvas>
 
@@ -1307,11 +1429,8 @@ hover:bg-red-100 active:scale-95 transition">
           renderReportTable(currentReportData);
 
           document.getElementById('summary').innerHTML = `
-  <div class="bg-white rounded-xl shadow-sm border border-slate-100
-              flex divide-x divide-slate-100 overflow-hidden">
-
     <!-- Check-in -->
-    <div class="flex-1 px-5 py-4">
+    <div class="bg-white rounded-xl shadow-sm border border-slate-100 px-5 py-4">
       <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
         พัสดุเข้า
       </p>
@@ -1326,7 +1445,7 @@ hover:bg-red-100 active:scale-95 transition">
     </div>
 
     <!-- Check-out -->
-    <div class="flex-1 px-5 py-4">
+    <div class="bg-white rounded-xl shadow-sm border border-slate-100 px-5 py-4">
       <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
         พัสดุออก
       </p>
@@ -1341,7 +1460,7 @@ hover:bg-red-100 active:scale-95 transition">
     </div>
 
     <!-- Remaining -->
-    <div class="flex-1 px-5 py-4">
+    <div class="bg-white rounded-xl shadow-sm border border-slate-100 px-5 py-4">
       <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
         คงเหลือ
       </p>
@@ -1354,8 +1473,6 @@ hover:bg-red-100 active:scale-95 transition">
         </span>
       </div>
     </div>
-
-  </div>
 `
 
           const tres = await fetch(
@@ -1970,6 +2087,15 @@ hover:bg-red-100 active:scale-95 transition">
               params.append("recipient", recipientVal);
             }
 
+            // ถ้าไม่มีการค้นหาใดๆ เลย ให้แสดงข้อความ
+            if (!queue && !recipientVal && !dateUI && (!status || status === "ทั้งหมด")) {
+              const box = document.getElementById("parcelList");
+              if (box) {
+                box.innerHTML = `<div class="text-sm text-gray-500 text-center py-4">กรุณากรอกเลขคิวหรือชื่อหน้ากล่อง</div>`;
+              }
+              return;
+            }
+
 
             const res = await fetch(`/api/parcels?${params.toString()}`, {
               credentials: "include"
@@ -2052,6 +2178,118 @@ ${recipientHtml}
         function closeReportPage() {
           reportPage.classList.add("hidden")
           adminPage.classList.remove("hidden")
+        }
+
+        /* ============================================================
+           Dashboard Page
+        ============================================================ */
+
+        async function openDashboardPage() {
+          document.getElementById("moreMenu").classList.add("hidden");
+          adminPage.classList.add("hidden");
+          document.getElementById("dashboardPage").classList.remove("hidden");
+          await loadDashboard();
+        }
+
+        function closeDashboardPage() {
+          document.getElementById("dashboardPage").classList.add("hidden");
+          adminPage.classList.remove("hidden");
+        }
+
+        /* ไป stranded overlay */
+        function goToStranded() {
+          const strandedPage = document.getElementById("strandedPage");
+          if (strandedPage) {
+            closeDashboardPage();
+            openStrandedPage();
+          }
+        }
+
+        async function loadDashboard() {
+          /* ---- reset ---- */
+          ["db-kpi-wait", "db-kpi-in", "db-kpi-out",
+            "db-s-pending", "db-s-waiting", "db-s-done"].forEach(id => {
+              const el = document.getElementById(id);
+              if (el) el.textContent = "...";
+            });
+
+          try {
+            const res = await fetch("/api/dashboard/today", { credentials: "include" });
+            if (!res.ok) throw new Error("โหลดข้อมูลไม่สำเร็จ");
+            const d = await res.json();
+
+            /* ① KPI */
+            document.getElementById("db-kpi-wait").textContent = d.kpi.total_wait;
+            document.getElementById("db-kpi-in").textContent = d.kpi.total_in;
+            document.getElementById("db-kpi-out").textContent = d.kpi.total_out;
+
+            /* ② สถานะ */
+            document.getElementById("db-s-pending").textContent = d.status_breakdown.pending;
+            document.getElementById("db-s-waiting").textContent = d.status_breakdown.waiting;
+            document.getElementById("db-s-done").textContent = d.status_breakdown.done;
+
+
+            /* ④ Section utilization — 5×4 heatmap grid */
+            const secEl = document.getElementById("db-sections");
+            if (d.sections.length === 0) {
+              secEl.innerHTML = `<span class="text-xs text-gray-400 col-span-5">ไม่มีข้อมูล section</span>`;
+            } else {
+              secEl.innerHTML = d.sections.map((s, i) => {
+                const pct = Math.min(s.pct, 100);
+                // สีพื้นหลัง — เข้มขึ้นตามปริมาณ
+                let bg, fg, border;
+                if (pct >= 100) {
+                  bg = "#fca5a5"; fg = "#7f1d1d"; border = "#f87171";
+                } else if (pct >= 75) {
+                  bg = `hsl(48,${40 + pct * 0.6}%,${90 - pct * 0.2}%)`;
+                  fg = "#713f12"; border = "#fde047";
+                } else if (pct >= 25) {
+                  bg = `hsl(142,${30 + pct * 0.5}%,${88 - pct * 0.25}%)`;
+                  fg = "#14532d"; border = "#86efac";
+                } else {
+                  bg = "#f0fdf4"; fg = "#15803d"; border = "#bbf7d0";
+                }
+                const label = s.name;  // e.g. "1–50"
+                const sNum = i + 1;   // S1…S20
+                return `
+                  <div title="Section ${sNum}: ${s.used}/${s.total} (${pct}%)" style="background:${bg};border:1px solid ${border};" class="rounded-lg p-1.5 flex flex-col items-center justify-center gap-0.5 cursor-default select-none">
+                    <span style="color:${fg};" class="text-[9px] font-semibold leading-none opacity-70">S${sNum}</span>
+                    <span style="color:${fg};" class="text-[13px] font-bold leading-none">${pct}%</span>
+                    <span style="color:${fg};" class="text-[8px] leading-none opacity-60">${s.used}/${s.total}</span>
+                  </div>`;
+              }).join("");
+            }
+
+            /* ⑤ Stranded shortcut */
+            const strandedSub = document.getElementById("db-stranded-sub");
+            if (strandedSub) {
+              strandedSub.textContent = d.stranded_30d > 0
+                ? `${d.stranded_30d} ชิ้น — แตะเพื่อดูรายการ`
+                : "ไม่มีพัสดุตกค้าง";
+            }
+            const strandedBtn = document.getElementById("db-stranded-btn");
+            if (strandedBtn) {
+              if (d.stranded_30d === 0) {
+                strandedBtn.classList.remove("border-red-200", "hover:bg-red-50");
+                strandedBtn.classList.add("border-gray-100", "hover:bg-gray-50");
+              }
+            }
+
+            /* timestamp */
+            const now = new Date(d.generated_at);
+            const hh = String(now.getHours()).padStart(2, "0");
+            const mm = String(now.getMinutes()).padStart(2, "0");
+            const updEl = document.getElementById("db-updated");
+            if (updEl) updEl.textContent = `อัปเดตล่าสุด ${hh}:${mm} น.`;
+
+          } catch (err) {
+            ["db-kpi-wait", "db-kpi-in", "db-kpi-out"].forEach(id => {
+              const el = document.getElementById(id);
+              if (el) el.textContent = "!";
+            });
+            const updEl = document.getElementById("db-updated");
+            if (updEl) updEl.textContent = `โหลดไม่สำเร็จ: ${err.message}`;
+          }
         }
 
         /* ============================================================
@@ -2181,9 +2419,9 @@ ${recipientHtml}
                     <div class="flex items-center gap-1.5">
                       <span class="material-symbols-outlined text-purple-400 text-[15px]">badge</span>
                       ${name !== "-"
-                        ? `<span class="text-sm font-semibold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-lg border border-purple-200">${escapeHtml(name)}</span>`
-                        : `<span class="text-xs text-gray-400 italic">ไม่ระบุชื่อ</span>`
-                      }
+                    ? `<span class="text-sm font-semibold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-lg border border-purple-200">${escapeHtml(name)}</span>`
+                    : `<span class="text-xs text-gray-400 italic">ไม่ระบุชื่อ</span>`
+                  }
                     </div>
                     <div class="flex gap-4 text-xs text-gray-500">
                       <span>เลขคิว <span class="font-semibold text-gray-700">${escapeHtml(p.queue_number ?? "-")}</span></span>
