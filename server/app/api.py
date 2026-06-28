@@ -147,6 +147,23 @@ def login_admin_alias(request: Request):
 
 @app.get("/admin/logout")
 def admin_logout(request: Request):
+    admin_data = request.session.get("admin")
+    if admin_data:
+        db = SessionLocal()
+        try:
+            write_audit(
+                db,
+                entity="System",
+                entity_id=0,
+                action="Admin Logout",
+                user=f"Admin: {admin_data.get('name', 'Unknown')}",
+                details="ผู้ดูแลระบบออกจากระบบ"
+            )
+            db.commit()
+        except Exception:
+            pass
+        finally:
+            db.close()
 
     request.session.clear()   # 👈 สำคัญสุด
 
@@ -195,6 +212,22 @@ def admin_login(payload: AdminLoginIn, request: Request):
     request.session["admin"] = {
         "name": payload.name
     }
+
+    db = SessionLocal()
+    try:
+        write_audit(
+            db,
+            entity="System",
+            entity_id=0,
+            action="Admin Login",
+            user=f"Admin: {payload.name}",
+            details="ผู้ดูแลระบบเข้าสู่ระบบ"
+        )
+        db.commit()
+    except Exception:
+        pass
+    finally:
+        db.close()
 
     return {"ok": True, "name": payload.name}
 
@@ -1065,7 +1098,7 @@ def get_available_periods(period: str = Query("daily", regex="^(daily|monthly|ye
 
 @app.get("/api/reports/summary")
 def report_summary(
-    period: str = Query("daily", regex="^(daily|monthly|yearly)$"),
+    period: str = Query("daily", regex="^(daily|weekly|dayofweek|monthly|yearly)$"),
     start: Optional[str] = None,
     end: Optional[str] = None,
     admin = Depends(require_admin)
@@ -1083,17 +1116,22 @@ def report_summary(
             if not dt:
                 continue
 
+            date_str = dt.strftime("%Y%m%d")
+            if start and date_str < start:
+                continue
+            if end and date_str > end:
+                continue
+
             if period == "daily":
-                key = dt.strftime("%Y%m%d")
+                key = date_str
+            elif period == "weekly":
+                key = dt.strftime("%Y-W%W")
+            elif period == "dayofweek":
+                key = str(dt.weekday())
             elif period == "monthly":
                 key = dt.strftime("%Y%m")
             else:
                 key = dt.strftime("%Y")
-
-            if start and key < start:
-                continue
-            if end and key > end:
-                continue
 
             checkin += 1
             if p.status == "ได้รับแล้ว":
@@ -1125,7 +1163,7 @@ def report_summary(
         db.close()
 
 @app.get("/api/reports/timeseries")
-def reports_timeseries(period: str = Query("daily", regex="^(daily|monthly|yearly)$"),
+def reports_timeseries(period: str = Query("daily", regex="^(daily|weekly|dayofweek|monthly|yearly|hourly)$"),
                        start: Optional[str] = None, end: Optional[str] = None, limit: int = 365,admin = Depends(require_admin)):
     db = SessionLocal()
     try:
@@ -1135,16 +1173,29 @@ def reports_timeseries(period: str = Query("daily", regex="^(daily|monthly|yearl
             dt = p.created_at
             if not dt:
                 continue
+            date_str = dt.strftime("%Y%m%d")
+            if start and date_str < start:
+                continue
+            if end and date_str > end:
+                continue
+                
             if period == "daily":
-                key = dt.strftime("%Y%m%d")
+                key = date_str
+            elif period == "weekly":
+                key = dt.strftime("%Y-W%W")
+            elif period == "dayofweek":
+                key = str(dt.weekday())
             elif period == "monthly":
                 key = dt.strftime("%Y%m")
+            elif period == "hourly":
+                tz_thai = timezone(timedelta(hours=7))
+                h = dt.astimezone(tz_thai).hour if dt.tzinfo else dt.hour
+                if 7 <= h <= 20:
+                    key = f"{h:02d}:00"
+                else:
+                    continue
             else:
                 key = dt.strftime("%Y")
-            if start and key < start:
-                continue
-            if end and key > end:
-                continue
             if key not in agg:
                 agg[key] = {"checkin": 0, "checkout": 0}
             agg[key]["checkin"] += 1
@@ -1161,6 +1212,76 @@ def reports_timeseries(period: str = Query("daily", regex="^(daily|monthly|yearl
             checkin.append(agg[k]["checkin"])
             checkout.append(agg[k]["checkout"])
         return {"labels": labels, "checkin": checkin, "checkout": checkout}
+    finally:
+        db.close()
+
+@app.get("/api/reports/advanced_charts")
+def reports_advanced_charts(period: str = Query("daily", regex="^(daily|weekly|dayofweek|monthly|yearly)$"),
+                       start: Optional[str] = None, end: Optional[str] = None, admin = Depends(require_admin)):
+    db = SessionLocal()
+    try:
+        rows = db.query(Parcel).order_by(Parcel.created_at).all()
+        carrier_counts = {}
+        peak_hours = {f"{h:02d}:00-{h+1:02d}:00": 0 for h in range(7, 20)}
+        checkin_total = 0
+        checkout_total = 0
+        
+        for p in rows:
+            dt = p.created_at
+            if not dt: continue
+            date_str = dt.strftime("%Y%m%d")
+            if start and date_str < start: continue
+            if end and date_str > end: continue
+
+            if period == "daily":
+                key = date_str
+            elif period == "weekly":
+                key = dt.strftime("%Y-W%W")
+            elif period == "dayofweek":
+                key = str(dt.weekday())
+            elif period == "monthly":
+                key = dt.strftime("%Y%m")
+            else:
+                key = dt.strftime("%Y")
+            
+            checkin_total += 1
+            cid = p.carrier_id
+            if cid:
+                carrier_counts[cid] = carrier_counts.get(cid, 0) + 1
+                
+            if p.status == "ได้รับแล้ว" and p.picked_up_at:
+                checkout_total += 1
+                pu = p.picked_up_at
+                tz_thai = timezone(timedelta(hours=7))
+                # แปลงเป็นเวลาไทยก่อนดึง .hour เสมอ
+                if pu.tzinfo is not None:
+                    hour = pu.astimezone(tz_thai).hour
+                else:
+                    hour = (pu + timedelta(hours=7)).hour
+                if 7 <= hour <= 20:
+                    hour_key = f"{hour:02d}:00-{hour+1:02d}:00"
+                    if hour_key in peak_hours:
+                        peak_hours[hour_key] += 1
+                    else:
+                        peak_hours[hour_key] = 1
+
+        carriers = db.query(CarrierList).all()
+        carrier_map = {c.carrier_id: c.carrier_name for c in carriers}
+        
+        doughnut_labels = []
+        doughnut_data = []
+        for cid, count in carrier_counts.items():
+            doughnut_labels.append(carrier_map.get(cid, f"Carrier {cid}"))
+            doughnut_data.append(count)
+            
+        peak_labels = list(peak_hours.keys())
+        peak_data = list(peak_hours.values())
+        
+        return {
+            "doughnut": {"labels": doughnut_labels, "data": doughnut_data},
+            "peak_hours": {"labels": peak_labels, "data": peak_data},
+            "gauge": {"checkin": checkin_total, "checkout": checkout_total}
+        }
     finally:
         db.close()
 
@@ -2104,6 +2225,102 @@ def dashboard_today(admin=Depends(require_admin)):
             Parcel.created_at <= cutoff_30
         ).scalar() or 0
 
+        # --- คำนวณ Alerts ---
+        alerts = []
+
+        # 🔴 แดง (Critical): พื้นที่จัดเก็บเต็ม
+        full_sections = [s for s in section_data if s["pct"] >= 100]
+        if full_sections:
+            count = len(full_sections)
+            alerts.append({
+                "type": "critical",
+                "color": "red",
+                "icon": "warning",
+                "title": "พื้นที่จัดเก็บเต็ม",
+                "message": f"มีพื้นที่จัดเก็บเต็ม 100% จำนวน {count} ช่อง"
+            })
+
+        # 🟠 ส้ม (Warning): พัสดุ "กำลังรอ" ค้างข้ามวัน
+        overnight_pending_count = db.query(sqlfunc.count(Parcel.id)).filter(
+            Parcel.status == "กำลังรอ",
+            Parcel.created_at < today_start
+        ).scalar() or 0
+        if overnight_pending_count > 0:
+            alerts.append({
+                "type": "warning",
+                "color": "orange",
+                "icon": "pending_actions",
+                "title": "พัสดุรอยืนยันค้างข้ามวัน",
+                "message": f"พบพัสดุ 'กำลังรอ' ค้างข้ามวัน {overnight_pending_count} ชิ้น",
+                "action": "force_confirm"
+            })
+
+        # 🔵 ฟ้า/เทา (Info): สรุปยอดเคลียร์ของเมื่อวาน
+        yesterday_start = today_start - timedelta(days=1)
+        yesterday_parcels = db.query(Parcel).filter(
+            Parcel.created_at >= yesterday_start,
+            Parcel.created_at < today_start
+        ).all()
+        y_total = len(yesterday_parcels)
+        y_waiting = sum(1 for p in yesterday_parcels if p.status != "ได้รับแล้ว")
+        
+        if y_total > 0:
+            alerts.append({
+                "type": "info",
+                "color": "blue",
+                "icon": "summarize",
+                "title": "สรุปยอดพัสดุเมื่อวาน",
+                "message": f"เมื่อวานเข้า {y_total} ชิ้น ยังไม่มีคนมารับ {y_waiting} ชิ้น"
+            })
+
+        # 🔴 แดง (Audit Log): ความเคลื่อนไหวผิดปกติวันนี้
+        today_audits = db.query(AuditLog).filter(
+            AuditLog.timestamp >= today_start
+        ).all()
+        
+        login_logouts = {}
+        deleted_parcels = {}
+        
+        for a in today_audits:
+            action = (a.action or "").lower()
+            admin_user = a.user or "Unknown"
+            
+            # กรองเฉพาะที่เป็น Admin เพื่อความชัดเจน (กรณีที่ไม่ได้กำหนด user แต่อยากให้ชัวร์)
+            if "Admin: " in admin_user:
+                name = admin_user.replace("Admin: ", "").strip()
+            else:
+                name = admin_user
+                
+            if "login" in action or "logout" in action:
+                action_th = "เข้าสู่ระบบ" if "login" in action else "ออกจากระบบ"
+                if name not in login_logouts:
+                    login_logouts[name] = []
+                login_logouts[name].append(action_th)
+            elif "ลบ" in action or "delete" in action:
+                deleted_parcels[name] = deleted_parcels.get(name, 0) + 1
+        
+        # เพิ่มแจ้งเตือน Login/Logout
+        for name, acts in login_logouts.items():
+            logins = acts.count("เข้าสู่ระบบ")
+            logouts = acts.count("ออกจากระบบ")
+            alerts.append({
+                "type": "critical",
+                "color": "red",
+                "icon": "admin_panel_settings",
+                "title": f"การเข้าใช้งานของ {name}",
+                "message": f"เข้าสู่ระบบ {logins} ครั้ง, ออกจากระบบ {logouts} ครั้ง ในวันนี้"
+            })
+            
+        # เพิ่มแจ้งเตือนการลบพัสดุ
+        for name, count in deleted_parcels.items():
+            alerts.append({
+                "type": "critical",
+                "color": "red",
+                "icon": "delete_forever",
+                "title": f"การลบข้อมูลโดย {name}",
+                "message": f"ทำการลบข้อมูลพัสดุจำนวน {count} รายการ ในวันนี้"
+            })
+
         return {
             "kpi": {
                 "total_in":   total_in,
@@ -2118,9 +2335,64 @@ def dashboard_today(admin=Depends(require_admin)):
             "carriers": carrier_data,
             "sections": section_data,
             "stranded_30d": stranded_count,
+            "alerts": alerts,
             "generated_at": now.isoformat()
         }
     finally:
         db.close()
 
+# ---------------------------
+# Force Confirm All Pending
+# ---------------------------
+@app.post("/api/dashboard/force_confirm_pending")
+def force_confirm_pending(request: Request, admin=Depends(require_admin)):
+    db = SessionLocal()
+    try:
+        admin_data = request.session.get("admin", {})
+        admin_name = admin_data.get("name", "Unknown Admin")
+        
+        pending_parcels = db.query(Parcel).filter(Parcel.status == "กำลังรอ").all()
+        if not pending_parcels:
+            return {"ok": True, "message": "ไม่มีพัสดุสถานะกำลังรอ", "count": 0}
+            
+        count = len(pending_parcels)
+        today = thai_now().strftime("%Y%m%d")
+        
+        for p in pending_parcels:
+            p.status = "ยังไม่ได้รับ"
+            
+            # Update reservation status to unlock sections if they are active
+            active_reservations = db.query(QueueReservation).filter(
+                QueueReservation.carrier_id == p.carrier_id,
+                QueueReservation.date == today,
+                QueueReservation.status == "active"
+            ).all()
+
+            for reservation in active_reservations:
+                if reservation.section_id == p.section_id:
+                    if reservation.current_seq >= reservation.end_seq:
+                        reservation.status = "full"
+                    else:
+                        reservation.status = "unactive"
+                else:
+                    reservation.status = "unactive"
+
+        db.commit()
+        
+        write_audit(
+            db,
+            entity="System",
+            entity_id=0,
+            action="Force Confirm Pending",
+            user=f"Admin: {admin_name}",
+            details=f"ยืนยันรับเข้าพัสดุสถานะกำลังรอทั้งหมด {count} ชิ้น"
+        )
+        db.commit()
+        
+        return {"ok": True, "count": count}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        db.close()
 # EOF

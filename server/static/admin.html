@@ -713,20 +713,13 @@ hover:bg-red-100 active:scale-95 transition">
         </div>
       </div>
 
-      <!-- ⑤ Shortcut พัสดุตกค้าง -->
+      <!-- ⑤ Alerts (แจ้งเตือน) -->
       <div>
         <p class="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-2">แจ้งเตือน</p>
-        <button id="db-stranded-btn" onclick="goToStranded()" class="w-full flex items-center gap-3 bg-white border border-red-200
-                 rounded-xl px-4 py-3 shadow-sm hover:bg-red-50 transition text-left">
-          <div class="w-9 h-9 rounded-lg bg-red-50 flex items-center justify-center flex-shrink-0">
-            <span class="material-symbols-outlined text-red-500 text-[18px]">warning</span>
-          </div>
-          <div class="flex-1 min-w-0">
-            <div class="text-sm font-medium text-red-700">พัสดุตกค้าง &gt;30 วัน</div>
-            <div id="db-stranded-sub" class="text-xs text-gray-400 mt-0.5">กำลังโหลด...</div>
-          </div>
-          <span class="material-symbols-outlined text-gray-300 text-[18px]">chevron_right</span>
-        </button>
+        <div id="db-alerts-container" class="flex flex-col gap-3">
+          <!-- Dynamic Alerts go here -->
+          <div class="text-xs text-gray-400 text-center py-2">กำลังโหลด...</div>
+        </div>
       </div>
 
       <!-- timestamp -->
@@ -785,9 +778,41 @@ hover:bg-red-100 active:scale-95 transition">
 
       </div>
 
-      <div id="summary" class="grid grid-cols-3 gap-4 mb-6"> </div>
+      <div id="summary" class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-6"> </div>
 
-      <canvas id="summaryChart" height="160"></canvas>
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 mb-6">
+        <div class="flex items-center justify-between mb-4">
+          <h3 id="summaryChartTitle" class="font-semibold text-slate-700 text-sm">
+            สถิติพัสดุเข้า-ออก (วันนี้ รายชั่วโมง)
+          </h3>
+          <select id="chartModeSelect" onchange="onChartModeChange()"
+            class="appearance-none rounded-xl border border-gray-200 bg-white
+                   px-3 py-1.5 text-xs font-medium text-gray-600 min-w-[140px]
+                   shadow-sm transition hover:border-orange-300
+                   focus:outline-none focus:ring-2 focus:ring-orange-400">
+            <option value="today" selected>วันนี้ (รายชั่วโมง)</option>
+            <option value="week">สัปดาห์นี้</option>
+            <option value="custom">ตามช่วงที่เลือก</option>
+          </select>
+        </div>
+        <canvas id="summaryChart" height="100"></canvas>
+      </div>
+
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 mb-6">
+        <h3 class="font-semibold text-slate-700 mb-4 text-sm">เปรียบเทียบพัสดุเข้า-รับออก (Grouped Bar)</h3>
+        <canvas id="groupedBarChart" height="100"></canvas>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4">
+          <h3 class="font-semibold text-slate-700 mb-4 text-sm">สัดส่วนพัสดุแยกตามขนส่ง</h3>
+          <div class="relative h-[250px]"><canvas id="doughnutChart"></canvas></div>
+        </div>
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4">
+          <h3 class="font-semibold text-slate-700 mb-4 text-sm">ช่วงเวลาเร่งด่วน (Peak Hours)</h3>
+          <div class="relative h-[250px]"><canvas id="peakHoursChart"></canvas></div>
+        </div>
+      </div>
 
       <div class="flex gap-2 my-3">
         <button onclick="toggleReportEdit()" class="bg-orange-500 text-white text-xs px-3 py-2 rounded-lg shadow
@@ -1428,52 +1453,57 @@ hover:bg-red-100 active:scale-95 transition">
           currentReportData = sdata.items || [];
           renderReportTable(currentReportData);
 
+          const ares = await fetch(
+            `/api/reports/advanced_charts?period=daily&start=${start}&end=${end}`,
+            { credentials: "include" }
+          );
+          const adata = await ares.json();
+
+          let rate = 0;
+          if (sdata.checkin > 0) rate = Math.round((sdata.checkout / sdata.checkin) * 100);
+          let rateColor = rate >= 80 ? 'text-emerald-500' : (rate >= 50 ? 'text-orange-500' : 'text-red-500');
+          let rateHex = rate >= 80 ? '#10b981' : (rate >= 50 ? '#f97316' : '#ef4444');
+
           document.getElementById('summary').innerHTML = `
     <!-- Check-in -->
-    <div class="bg-white rounded-xl shadow-sm border border-slate-100 px-5 py-4">
-      <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-        พัสดุเข้า
-      </p>
+    <div class="bg-white rounded-xl shadow-sm border border-slate-100 px-3 py-3">
+      <p class="text-[10px] font-semibold uppercase tracking-wider text-slate-400">พัสดุเข้า</p>
       <div class="flex items-center gap-2 mt-1">
-        <span class="material-symbols-outlined text-emerald-500 text-xl">
-          move_to_inbox
-        </span>
-        <span class="text-2xl font-bold text-slate-900">
-          ${sdata.checkin}
-        </span>
+        <span class="material-symbols-outlined text-emerald-500 text-lg">move_to_inbox</span>
+        <span class="text-xl font-bold text-slate-900">${sdata.checkin}</span>
       </div>
     </div>
-
     <!-- Check-out -->
-    <div class="bg-white rounded-xl shadow-sm border border-slate-100 px-5 py-4">
-      <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-        พัสดุออก
-      </p>
+    <div class="bg-white rounded-xl shadow-sm border border-slate-100 px-3 py-3">
+      <p class="text-[10px] font-semibold uppercase tracking-wider text-slate-400">พัสดุออก</p>
       <div class="flex items-center gap-2 mt-1">
-        <span class="material-symbols-outlined text-orange-500 text-xl">
-          outbox
-        </span>
-        <span class="text-2xl font-bold text-slate-900">
-          ${sdata.checkout}
-        </span>
+        <span class="material-symbols-outlined text-orange-500 text-lg">outbox</span>
+        <span class="text-xl font-bold text-slate-900">${sdata.checkout}</span>
       </div>
     </div>
-
     <!-- Remaining -->
-    <div class="bg-white rounded-xl shadow-sm border border-slate-100 px-5 py-4">
-      <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-        คงเหลือ
-      </p>
+    <div class="bg-white rounded-xl shadow-sm border border-slate-100 px-3 py-3">
+      <p class="text-[10px] font-semibold uppercase tracking-wider text-slate-400">คงเหลือ</p>
       <div class="flex items-center gap-2 mt-1">
-        <span class="material-symbols-outlined text-blue-500 text-xl">
-          inventory_2
-        </span>
-        <span class="text-2xl font-bold text-slate-900">
-          ${sdata.remaining}
-        </span>
+        <span class="material-symbols-outlined text-blue-500 text-lg">inventory_2</span>
+        <span class="text-xl font-bold text-slate-900">${sdata.remaining}</span>
       </div>
     </div>
-`
+    <!-- Gauge (Remaining Rate) -->
+    <div class="bg-white rounded-xl shadow-sm border border-slate-100 px-3 py-3 flex flex-col justify-between">
+      <p class="text-[10px] font-semibold uppercase tracking-wider text-slate-400">อัตราการระบายของ</p>
+      <div class="flex items-center justify-between mt-1">
+        <div class="flex items-center gap-1.5">
+          <span class="material-symbols-outlined ${rateColor} text-lg">speed</span>
+          <span class="text-xl font-bold text-slate-900">${rate}%</span>
+        </div>
+        <div class="w-8 h-8 rounded-full flex items-center justify-center text-[9px] font-bold" 
+             style="background: conic-gradient(${rateHex} ${rate}%, #f1f5f9 0);">
+             <div class="w-5 h-5 bg-white rounded-full flex items-center justify-center"></div>
+        </div>
+      </div>
+    </div>
+`;
 
           const tres = await fetch(
             `/api/reports/timeseries?period=daily&start=${start}&end=${end}`,
@@ -1482,7 +1512,8 @@ hover:bg-red-100 active:scale-95 transition">
 
           const tdata = await tres.json();
 
-          renderChart(tdata.labels, tdata.checkin, tdata.checkout, 'daily');
+          await loadSummaryChart();
+          await renderAdvancedCharts(tdata.labels, tdata.checkin, tdata.checkout, adata, start, end);
         }
 
         /* ---------- table ---------- */
@@ -1603,24 +1634,36 @@ hover:bg-red-100 active:scale-95 transition">
         }
 
         /* ---------- chart ---------- */
+        let groupedChartInst = null;
+        let doughnutChartInst = null;
+        let peakChartInst = null;
+        Chart.defaults.font.family = "'Noto Sans Thai Looped', sans-serif";
+
         function renderChart(labels, checkin, checkout, period) {
           const formattedLabels = labels.map(l => {
-            if (period === 'daily' && l.length === 8) return `${l.slice(0, 4)}-${l.slice(4, 6)}-${l.slice(6)}`;
-            if (period === 'monthly' && l.length === 6) return `${l.slice(0, 4)}-${l.slice(4, 6)}`;
+            if (period === 'hourly') return l;
+            if (period === 'daily' && l.length === 8) return `${l.slice(6, 8)}/${l.slice(4, 6)}/${l.slice(0, 4)}`;
+            if (period === 'weekly' && l.includes('-W')) {
+              const [y, w] = l.split('-W');
+              return `สัปดาห์ที่ ${w}/${y}`;
+            }
+            if (period === 'dayofweek') {
+              const days = ['จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์', 'อาทิตย์'];
+              return days[parseInt(l)] || l;
+            }
+            if (period === 'monthly' && l.length === 6) return `${l.slice(4, 6)}/${l.slice(0, 4)}`;
             return l;
           });
 
           const ctx = document.getElementById('summaryChart').getContext('2d');
           if (chartInst) chartInst.destroy();
-          // gradient เขียว
-          const greenGrad = ctx.createLinearGradient(0, 0, 0, 180)
-          greenGrad.addColorStop(0, 'rgba(34,197,94,0.25)')
-          greenGrad.addColorStop(1, 'rgba(34,197,94,0)')
-
-          // gradient ส้ม
-          const orangeGrad = ctx.createLinearGradient(0, 0, 0, 180)
-          orangeGrad.addColorStop(0, 'rgba(249,115,22,0.25)')
-          orangeGrad.addColorStop(1, 'rgba(249,115,22,0)')
+          const greenGrad = ctx.createLinearGradient(0, 0, 0, 180);
+          greenGrad.addColorStop(0, 'rgba(34,197,94,0.25)');
+          greenGrad.addColorStop(1, 'rgba(34,197,94,0)');
+          const orangeGrad = ctx.createLinearGradient(0, 0, 0, 180);
+          orangeGrad.addColorStop(0, 'rgba(249,115,22,0.25)');
+          orangeGrad.addColorStop(1, 'rgba(249,115,22,0)');
+          
           chartInst = new Chart(ctx, {
             type: 'line',
             data: {
@@ -1630,16 +1673,14 @@ hover:bg-red-100 active:scale-95 transition">
                 data: checkin,
                 borderColor: '#22c55e',
                 backgroundColor: greenGrad,
-                usePointStyle: true,
                 fill: true,
-                tension: 0.35,
+                tension: 0.45,
                 borderWidth: 3,
-                pointRadius: 4,
+                pointRadius: 0,
                 pointHoverRadius: 6,
                 pointBackgroundColor: '#fff',
                 pointBorderColor: '#22c55e',
                 pointBorderWidth: 2
-
               },
               {
                 label: 'พัสดุออก',
@@ -1647,30 +1688,214 @@ hover:bg-red-100 active:scale-95 transition">
                 borderColor: '#f97316',
                 backgroundColor: orangeGrad,
                 fill: true,
-                tension: 0.35,
+                tension: 0.45,
                 borderWidth: 3,
-                pointRadius: 4,
+                pointRadius: 0,
                 pointHoverRadius: 6,
                 pointBackgroundColor: '#fff',
                 pointBorderColor: '#f97316',
                 pointBorderWidth: 2
-              }
-              ]
+              }]
             },
             options: {
-              responsive: true, plugins: {
-                legend: {
-                  position: 'top',
-                  labels: {
-                    usePointStyle: true,     // ⭐ สำคัญ
-                    pointStyle: 'circle',    // ⭐ วงกลม
-                    boxWidth: 8,
-                    boxHeight: 8,
-                    padding: 12,
-                    font: { size: 11 }
-                  }
-                }
-              }, scales: { y: { beginAtZero: true } }
+              responsive: true,
+              interaction: { mode: 'index', intersect: false },
+              plugins: {
+                legend: { position: 'top', labels: { usePointStyle: true, pointStyle: 'circle', boxWidth: 8, boxHeight: 8, padding: 12, font: { size: 11 } } },
+                tooltip: { backgroundColor: 'rgba(255, 255, 255, 0.95)', titleColor: '#1e293b', bodyColor: '#475569', borderColor: '#e2e8f0', borderWidth: 1, padding: 12, cornerRadius: 8, boxPadding: 6, usePointStyle: true }
+              },
+              scales: { 
+                x: { grid: { display: false } },
+                y: { beginAtZero: true, border: { display: false }, grid: { borderDash: [5, 5], color: '#f1f5f9' } } 
+              }
+            }
+          });
+        }
+        
+        /* ============================================================
+           Chart Mode Switcher
+        ============================================================ */
+
+        async function onChartModeChange() {
+          await loadSummaryChart();
+        }
+
+        async function loadSummaryChart() {
+          const mode = document.getElementById("chartModeSelect")?.value || "today";
+          const titleEl = document.getElementById("summaryChartTitle");
+
+          if (mode === "today") {
+            const now = new Date();
+            const thai = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Bangkok" }));
+            const dd = String(thai.getDate()).padStart(2, "0");
+            const mm = String(thai.getMonth() + 1).padStart(2, "0");
+            const yyyy = thai.getFullYear();
+            const todayStr = `${yyyy}${mm}${dd}`;
+
+            const res = await fetch(
+              `/api/reports/timeseries?period=hourly&start=${todayStr}&end=${todayStr}`,
+              { credentials: "include" }
+            );
+            const data = await res.json();
+            if (titleEl) titleEl.textContent = "สถิติพัสดุเข้า-ออก (วันนี้ รายชั่วโมง)";
+            renderChart(data.labels, data.checkin, data.checkout, "hourly");
+
+          } else if (mode === "week") {
+            const now = new Date();
+            const thai = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Bangkok" }));
+            const dow = thai.getDay();
+            const diffToMon = (dow === 0 ? -6 : 1 - dow);
+            const monday = new Date(thai);
+            monday.setDate(thai.getDate() + diffToMon);
+
+            const fmt = d => {
+              const dd = String(d.getDate()).padStart(2, "0");
+              const mm = String(d.getMonth() + 1).padStart(2, "0");
+              return `${d.getFullYear()}${mm}${dd}`;
+            };
+
+            const res = await fetch(
+              `/api/reports/timeseries?period=dayofweek&start=${fmt(monday)}&end=${fmt(thai)}`,
+              { credentials: "include" }
+            );
+            const data = await res.json();
+            if (titleEl) titleEl.textContent = "สถิติพัสดุเข้า-ออก (สัปดาห์นี้)";
+            renderChart(data.labels, data.checkin, data.checkout, "dayofweek");
+
+          } else {
+            const start = unslash(document.getElementById("r_start").value);
+            const end = unslash(document.getElementById("r_end").value);
+            if (!start || !end) return;
+
+            const res = await fetch(
+              `/api/reports/timeseries?period=daily&start=${start}&end=${end}`,
+              { credentials: "include" }
+            );
+            const data = await res.json();
+            if (titleEl) titleEl.textContent = "สถิติพัสดุเข้า-ออก (ตามช่วงที่เลือก)";
+            renderChart(data.labels, data.checkin, data.checkout, "daily");
+          }
+        }
+
+        async function renderAdvancedCharts(labels, checkin, checkout, adata, start, end) {
+          const period = 'daily';
+          const formattedLabels = labels.map(l => {
+            if (period === 'daily' && l.length === 8) return `${l.slice(6, 8)}/${l.slice(4, 6)}/${l.slice(0, 4)}`;
+            if (period === 'weekly' && l.includes('-W')) {
+              const [y, w] = l.split('-W');
+              return `สัปดาห์ที่ ${w}/${y}`;
+            }
+            if (period === 'dayofweek') {
+              const days = ['จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์', 'อาทิตย์'];
+              return days[parseInt(l)] || l;
+            }
+            if (period === 'monthly' && l.length === 6) return `${l.slice(4, 6)}/${l.slice(0, 4)}`;
+            return l;
+          });
+
+          // Grouped Bar Chart
+          const ctxGrouped = document.getElementById('groupedBarChart').getContext('2d');
+          if (groupedChartInst) groupedChartInst.destroy();
+          groupedChartInst = new Chart(ctxGrouped, {
+            type: 'bar',
+            data: {
+              labels: formattedLabels,
+              datasets: [{
+                label: 'พัสดุเข้า', data: checkin, backgroundColor: '#22c55e', borderRadius: 4, barPercentage: 0.8, categoryPercentage: 0.8
+              }, {
+                label: 'พัสดุออก', data: checkout, backgroundColor: '#38bdf8', borderRadius: 4, barPercentage: 0.8, categoryPercentage: 0.8
+              }]
+            },
+            options: {
+              responsive: true,
+              interaction: { mode: 'index', intersect: false },
+              plugins: {
+                legend: { position: 'top', labels: { usePointStyle: true, pointStyle: 'circle', padding: 12, font: { size: 11 } } },
+                tooltip: { backgroundColor: 'rgba(255, 255, 255, 0.95)', titleColor: '#1e293b', bodyColor: '#475569', borderColor: '#e2e8f0', borderWidth: 1, padding: 12, cornerRadius: 8, boxPadding: 6, usePointStyle: true }
+              },
+              scales: { 
+                x: { grid: { display: false } },
+                y: { beginAtZero: true, border: { display: false }, grid: { borderDash: [5, 5], color: '#f1f5f9' } } 
+              }
+            }
+          });
+
+          // Doughnut Chart
+          const ctxDoughnut = document.getElementById('doughnutChart').getContext('2d');
+          if (doughnutChartInst) doughnutChartInst.destroy();
+          doughnutChartInst = new Chart(ctxDoughnut, {
+            type: 'doughnut',
+            data: {
+              labels: adata.doughnut.labels,
+              datasets: [{
+                data: adata.doughnut.data,
+                backgroundColor: adata.doughnut.labels.map(label => {
+                  const n = label.toLowerCase();
+                  if (n.includes('flash')) return '#fde047'; // เหลืองอ่อน
+                  if (n.includes('j&t')) return '#ef4444';   // แดง
+                  if (n.includes('spx')) return '#ea580c';   // ส้มเข้ม
+                  if (n.includes('dhl')) return '#eab308';   // เหลืองเข้ม
+                  if (n.includes('kex') || n.includes('kerry')) return '#fb923c'; // ส้มอ่อน
+                  if (n.includes('lazada') || n.includes('lex')) return '#a855f7'; // ม่วง
+                  return '#94a3b8'; // อื่นๆ (เทา)
+                }),
+                borderWidth: 2,
+                borderColor: '#ffffff',
+                hoverOffset: 4
+              }]
+            },
+            options: {
+              responsive: true, maintainAspectRatio: false,
+              cutout: '65%',
+              plugins: {
+                legend: { position: 'right', labels: { usePointStyle: true, pointStyle: 'circle', padding: 10, font: { size: 11 } } },
+                tooltip: { backgroundColor: 'rgba(255, 255, 255, 0.95)', titleColor: '#1e293b', bodyColor: '#475569', borderColor: '#e2e8f0', borderWidth: 1, padding: 12, cornerRadius: 8 }
+              }
+            }
+          });
+
+          // Horizontal Bar Chart (Peak Hours) — ดึงจาก timeseries hourly เพื่อความถูกต้อง
+          try {
+            const phRes = await fetch(
+              `/api/reports/timeseries?period=hourly&start=${start}&end=${end}`,
+              { credentials: "include" }
+            );
+            const phData = await phRes.json();
+            // แปลง "07:00" → "07:00-08:00" ให้ตรงกับ format label เดิม
+            adata.peak_hours = {
+              labels: phData.labels.map(l => {
+                const h = parseInt(l);
+                return `${String(h).padStart(2, "0")}:00-${String(h + 1).padStart(2, "0")}:00`;
+              }),
+              data: phData.checkout
+            };
+          } catch (e) { /* fallback ใช้ adata.peak_hours เดิมถ้า fetch ล้มเหลว */ }
+
+          const ctxPeak = document.getElementById('peakHoursChart').getContext('2d');
+          if (peakChartInst) peakChartInst.destroy();
+          peakChartInst = new Chart(ctxPeak, {
+            type: 'bar',
+            data: {
+              labels: adata.peak_hours.labels,
+              datasets: [{
+                label: 'จำนวนพัสดุรับออก',
+                data: adata.peak_hours.data,
+                backgroundColor: '#f43f5e',
+                borderRadius: 4,
+                barPercentage: 0.7
+              }]
+            },
+            options: {
+              indexAxis: 'y',
+              responsive: true, maintainAspectRatio: false,
+              plugins: {
+                legend: { display: false },
+                tooltip: { backgroundColor: 'rgba(255, 255, 255, 0.95)', titleColor: '#1e293b', bodyColor: '#475569', borderColor: '#e2e8f0', borderWidth: 1, padding: 12, cornerRadius: 8 }
+              },
+              scales: { 
+                x: { beginAtZero: true, border: { display: false }, grid: { borderDash: [5, 5], color: '#f1f5f9' } },
+                y: { grid: { display: false }, ticks: { font: { size: 10 } } }
+              }
             }
           });
         }
@@ -2260,19 +2485,62 @@ ${recipientHtml}
               }).join("");
             }
 
-            /* ⑤ Stranded shortcut */
-            const strandedSub = document.getElementById("db-stranded-sub");
-            if (strandedSub) {
-              strandedSub.textContent = d.stranded_30d > 0
-                ? `${d.stranded_30d} ชิ้น — แตะเพื่อดูรายการ`
-                : "ไม่มีพัสดุตกค้าง";
-            }
-            const strandedBtn = document.getElementById("db-stranded-btn");
-            if (strandedBtn) {
-              if (d.stranded_30d === 0) {
-                strandedBtn.classList.remove("border-red-200", "hover:bg-red-50");
-                strandedBtn.classList.add("border-gray-100", "hover:bg-gray-50");
+            /* ⑤ Alerts Injection */
+            const alertsContainer = document.getElementById("db-alerts-container");
+            if (alertsContainer) {
+              let alertsHtml = '';
+
+              // Static Stranded Alert
+              let sColor = d.stranded_30d > 0 ? "red" : "gray";
+              let sBg = d.stranded_30d > 0 ? "bg-red-50" : "bg-gray-50";
+              let sText = d.stranded_30d > 0 ? "text-red-500" : "text-gray-400";
+              let sTitle = d.stranded_30d > 0 ? "text-red-700" : "text-gray-600";
+
+              alertsHtml += `
+                <button onclick="goToStranded()" class="w-full flex items-center gap-3 bg-white border border-${sColor}-200 rounded-xl px-4 py-3 shadow-sm hover:${sBg} transition text-left">
+                  <div class="w-9 h-9 rounded-lg ${sBg} flex items-center justify-center flex-shrink-0">
+                    <span class="material-symbols-outlined ${sText} text-[18px]">inventory_2</span>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <div class="text-sm font-medium ${sTitle}">พัสดุตกค้าง &gt;30 วัน</div>
+                    <div class="text-xs text-gray-400 mt-0.5">${d.stranded_30d > 0 ? `${d.stranded_30d} ชิ้น — แตะเพื่อดูรายการ` : 'ไม่มีพัสดุตกค้าง'}</div>
+                  </div>
+                  <span class="material-symbols-outlined text-gray-300 text-[18px]">chevron_right</span>
+                </button>
+              `;
+
+              // Dynamic Alerts from API
+              if (d.alerts && d.alerts.length > 0) {
+                d.alerts.forEach(alert => {
+                  let bg = `bg-${alert.color}-50`;
+                  let text = `text-${alert.color}-500`;
+                  let titleColor = `text-${alert.color}-700`;
+                  let border = `border-${alert.color}-200`;
+
+                  let actionBtn = "";
+                  if (alert.action === "force_confirm") {
+                    actionBtn = `
+                      <button onclick="event.stopPropagation(); forceConfirmPending()" class="ml-auto bg-orange-500 hover:bg-orange-600 text-white text-xs px-3 py-1.5 rounded-lg shadow-sm transition active:scale-95 whitespace-nowrap">
+                        ยืนยันทั้งหมด
+                      </button>
+                    `;
+                  }
+
+                  alertsHtml += `
+                    <div class="w-full flex items-center gap-3 bg-white border ${border} rounded-xl px-4 py-3 shadow-sm text-left">
+                      <div class="w-9 h-9 rounded-lg ${bg} flex items-center justify-center flex-shrink-0">
+                        <span class="material-symbols-outlined ${text} text-[18px]">${alert.icon || 'notifications'}</span>
+                      </div>
+                      <div class="flex-1 min-w-0">
+                        <div class="text-sm font-medium ${titleColor}">${alert.title}</div>
+                        <div class="text-xs text-gray-400 mt-0.5">${alert.message}</div>
+                      </div>
+                      ${actionBtn}
+                    </div>
+                  `;
+                });
               }
+              alertsContainer.innerHTML = alertsHtml;
             }
 
             /* timestamp */
@@ -2289,6 +2557,25 @@ ${recipientHtml}
             });
             const updEl = document.getElementById("db-updated");
             if (updEl) updEl.textContent = `โหลดไม่สำเร็จ: ${err.message}`;
+          }
+        }
+
+        async function forceConfirmPending() {
+          if (!confirm("ยืนยันพัสดุสถานะ 'กำลังรอ' ทั้งหมดเป็น 'ยังไม่ได้รับ' ใช่หรือไม่?")) return;
+          try {
+            const res = await fetch("/api/dashboard/force_confirm_pending", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" }
+            });
+            const data = await res.json();
+            if (data.ok) {
+              alert(`สำเร็จ! ยืนยันพัสดุทั้งหมด ${data.count} ชิ้น`);
+              loadDashboard();
+            } else {
+              alert(data.message || "เกิดข้อผิดพลาด");
+            }
+          } catch (err) {
+            alert("Error: " + err.message);
           }
         }
 
