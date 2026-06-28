@@ -1848,12 +1848,14 @@ def list_audit_logs(
             tzinfo=timezone(timedelta(hours=7))
         )
 
-        start_utc = start_local.astimezone(timezone.utc)
-        end_utc = start_utc + timedelta(days=1)
+        # แก้ไข bug: timestamp ตอนบันทึกใช้ thai_now() ซึ่งเป็น UTC+7
+        # ดังนั้นตอน query จึงควรเทียบด้วย timezone UTC+7 เดียวกัน
+        # เพื่อไม่ให้เกิดปัญหาการเปรียบเทียบ string/เวลา ข้าม timezone ที่ทำให้ข้อมูลบางช่วงเวลาหายไป
+        end_local = start_local + timedelta(days=1)
 
         query = query.filter(
-            AuditLog.timestamp >= start_utc,
-            AuditLog.timestamp < end_utc
+            AuditLog.timestamp >= start_local,
+            AuditLog.timestamp < end_local
         )
 
     # filter action
@@ -1878,6 +1880,10 @@ def list_audit_logs(
             query = query.filter(AuditLog.timestamp < before_dt)
         except Exception:
             pass
+
+    # ถ้าค้นหาตามวันที่ ให้แสดงทั้งหมด (ไม่ limit)
+    if date:
+        limit = None
 
     logs = (
         query
