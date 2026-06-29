@@ -181,15 +181,14 @@ hover:bg-red-100 active:scale-95 transition">
        class="border px-3 py-2 rounded-xl text-sm w-32">
         
         <!-- search button -->
-        <input id="dateFilter"
-       type="date"
-       style="position:fixed;left:-9999px;width:1px;height:1px;opacity:0;">
-
-<button type="button"
-        onclick="openCalendar()"
-        class="bg-orange-500 hover:bg-orange-600 transition text-white px-4 py-2 rounded-xl text-sm shadow">
-    ค้นหา
-</button>
+        <div class="relative">
+          <input id="dateFilter" type="date"
+            onchange="loadWaitingParcels()"
+            class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+          <div class="bg-orange-500 hover:bg-orange-600 transition text-white px-4 py-2 rounded-xl text-sm shadow pointer-events-none">
+            ค้นหา
+          </div>
+        </div>
 
       </div>
 
@@ -1772,25 +1771,6 @@ function handleSearchClick() {
 
     loadWaitingParcels(date);
 }
-function openCalendar() {
-
-    const input = document.getElementById("dateFilter");
-
-    input.value = ""; // ล้างวันที่เก่าก่อน
-
-    input.onchange = () => {
-        loadWaitingParcels();
-    };
-
-    input.focus();
-
-    if (typeof input.showPicker === "function") {
-        input.showPicker();
-    } else {
-        input.click();
-    }
-}
-
   </script>
 
   <script>
