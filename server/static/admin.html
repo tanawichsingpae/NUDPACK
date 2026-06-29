@@ -239,13 +239,14 @@ hover:bg-red-100 active:scale-95 transition">
         <input id="recipientSearch" placeholder="ค้นหาชื่อหน้ากล่อง" class="border px-3 py-2 rounded-xl text-sm w-32">
 
         <!-- search button -->
-        <input id="dateFilter" type="date" onchange="loadWaitingParcels()" class="border px-3 py-2 rounded-xl text-sm w-36
-                 focus:ring-2 focus:ring-orange-400 focus:outline-none">
-
-        <button type="button" onclick="loadWaitingParcels()"
-          class="bg-orange-500 hover:bg-orange-600 transition text-white px-4 py-2 rounded-xl text-sm shadow">
-          ค้นหา
-        </button>
+        <div class="relative">
+          <input id="dateFilter" type="date" onchange="loadWaitingParcels()"
+            class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+          <div
+            class="bg-orange-500 hover:bg-orange-600 transition text-white px-4 py-2 rounded-xl text-sm shadow pointer-events-none">
+            ค้นหา
+          </div>
+        </div>
 
       </div>
 
@@ -2819,11 +2820,11 @@ ${recipientHtml}
 
           // ✅ ต้องมี backtick
           const todayISO = `${yyyy}-${mm}-${dd}`
-
           const dateInput = document.getElementById("dateFilter")
           if (dateInput) {
             dateInput.value = todayISO
           }
+
           // โหลดพัสดุของวันนี้ทันที
           loadWaitingParcels()
         }
