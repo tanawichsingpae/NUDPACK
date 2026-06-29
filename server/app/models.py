@@ -27,6 +27,7 @@ class Parcel(Base):
     unofficial_recipient = Column(String, nullable=True)
     admin_staff_name = Column(String, nullable=True)
     picked_up_at = Column(DateTime(timezone=True), index=True, nullable=True)
+    hold_for_disposal = Column(Boolean, default=False)
 
 
 

@@ -233,19 +233,20 @@ hover:bg-red-100 active:scale-95 transition">
       <div class="flex gap-2 items-center flex-wrap">
 
         <!-- queue search -->
-        <input id="queueSearch" placeholder="ค้นหาเลขคิว" class="border px-3 py-2 rounded-xl text-sm w-24">
+        <input id="queueSearch" placeholder="ค้นหาเลขคิว" class="border px-3 py-2 rounded-xl text-sm w-24"
+          onkeydown="if(event.key === 'Enter') loadWaitingParcels()">
 
         <!-- recipient search -->
-        <input id="recipientSearch" placeholder="ค้นหาชื่อหน้ากล่อง" class="border px-3 py-2 rounded-xl text-sm w-32">
+        <input id="recipientSearch" placeholder="ค้นหาชื่อหน้ากล่อง" class="border px-3 py-2 rounded-xl text-sm w-32"
+          onkeydown="if(event.key === 'Enter') loadWaitingParcels()">
 
         <!-- search button -->
         <div class="relative">
-          <input id="dateFilter" type="date" onchange="loadWaitingParcels()"
-            class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
-          <div
-            class="bg-orange-500 hover:bg-orange-600 transition text-white px-4 py-2 rounded-xl text-sm shadow pointer-events-none">
+          <input id="dateFilter" type="date" class="absolute w-0 h-0 opacity-0 pointer-events-none">
+          <button onclick="openCalendar()"
+            class="bg-orange-500 hover:bg-orange-600 transition text-white px-4 py-2 rounded-xl text-sm shadow">
             ค้นหา
-          </div>
+          </button>
         </div>
 
       </div>
@@ -573,22 +574,35 @@ hover:bg-red-100 active:scale-95 transition">
   <div id="strandedPage" class="fixed inset-0 bg-[#fafafa] hidden overflow-y-auto z-50">
 
     <header class="sticky top-0 bg-white border-b p-4 z-30">
-      <div class="max-w-xl mx-auto relative flex items-center">
-        <button onclick="closeStrandedPage()" class="size-9 rounded-full bg-slate-100
-             flex items-center justify-center
-             hover:bg-slate-200 transition">
-          <span class="material-symbols-outlined text-slate-700">arrow_back</span>
-        </button>
-        <h1 class="absolute left-1/2 -translate-x-1/2 text-base font-semibold text-slate-800">
-          พัสดุตกค้าง
-        </h1>
-        <!-- Export button (right side) -->
-        <button onclick="exportStrandedParcels()" class="ml-auto flex items-center gap-1 bg-orange-500 hover:bg-orange-600
-                 active:scale-95 transition text-white text-sm font-medium
-                 px-3 py-2 rounded-xl shadow">
-          <span class="material-symbols-outlined text-[18px]">download</span>
-          Excel
-        </button>
+      <div class="max-w-xl mx-auto flex flex-col gap-3">
+        <!-- Top Row -->
+        <div class="relative flex items-center">
+          <button onclick="closeStrandedPage()" class="size-9 rounded-full bg-slate-100
+               flex items-center justify-center
+               hover:bg-slate-200 transition">
+            <span class="material-symbols-outlined text-slate-700">arrow_back</span>
+          </button>
+          <h1 class="absolute left-1/2 -translate-x-1/2 text-base font-semibold text-slate-800">
+            พัสดุตกค้าง
+          </h1>
+        </div>
+        <!-- Bottom Row (Buttons) -->
+        <div class="flex items-center gap-2 justify-end">
+          <!-- Add to Hold List button -->
+          <button id="addToHoldBtn" onclick="addStrandedToHold()" hidden class="flex items-center gap-1 bg-amber-500 hover:bg-amber-600
+                         active:scale-95 transition text-white text-xs font-medium
+                         px-3 py-2 rounded-xl shadow">
+            <span class="material-symbols-outlined text-[16px]">inventory</span>
+            เพิ่มเข้า Hold List
+          </button>
+          <!-- Export button -->
+          <button onclick="exportStrandedParcels()" class="flex items-center gap-1 bg-orange-500 hover:bg-orange-600
+                   active:scale-95 transition text-white text-sm font-medium
+                   px-3 py-2 rounded-xl shadow">
+            <span class="material-symbols-outlined text-[18px]">download</span>
+            Excel
+          </button>
+        </div>
       </div>
     </header>
 
@@ -617,10 +631,26 @@ hover:bg-red-100 active:scale-95 transition">
             ค้นหา
           </button>
         </div>
+
+        <button onclick="openHoldListPage()"
+          class="ml-auto flex items-center gap-1 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 text-sm px-3 py-2 rounded-xl shadow-sm active:scale-95 transition font-medium">
+          <span class="material-symbols-outlined text-[18px]">inventory</span>
+          ดู Hold List
+        </button>
       </div>
 
       <!-- Summary card -->
       <div id="strandedSummary" class="mb-4"></div>
+
+      <!-- Select-all checkbox row (shown after load) -->
+      <div id="strandedSelectBar" class="hidden flex items-center gap-2 mb-3">
+        <label class="flex items-center gap-2 text-sm text-gray-600 cursor-pointer select-none">
+          <input type="checkbox" id="strandedSelectAll" onchange="toggleSelectAllStranded(this.checked)"
+            class="w-4 h-4 accent-amber-500 rounded">
+          เลือกทั้งหมด
+        </label>
+        <span id="strandedSelectedCount" class="text-xs text-amber-600 font-medium"></span>
+      </div>
 
       <!-- List grouped by date -->
       <div id="strandedList"></div>
@@ -628,6 +658,66 @@ hover:bg-red-100 active:scale-95 transition">
     </div>
   </div>
   <!-- ================= /Stranded Page ================= -->
+
+  <!-- ================= Hold List Page ================= -->
+  <div id="holdListPage" class="fixed inset-0 bg-[#fafafa] hidden overflow-y-auto z-50">
+
+    <header class="sticky top-0 bg-white border-b p-4 z-30">
+      <div class="max-w-xl mx-auto relative flex items-center">
+        <button onclick="closeHoldListPage()" class="size-9 rounded-full bg-slate-100
+             flex items-center justify-center
+             hover:bg-slate-200 transition">
+          <span class="material-symbols-outlined text-slate-700">arrow_back</span>
+        </button>
+        <h1 class="absolute left-1/2 -translate-x-1/2 text-base font-semibold text-slate-800">
+          Hold List
+        </h1>
+        <button onclick="refreshHoldList()" class="ml-auto size-9 rounded-full bg-slate-100
+                 flex items-center justify-center hover:bg-slate-200 transition">
+          <span class="material-symbols-outlined text-slate-600 text-[18px]">refresh</span>
+        </button>
+      </div>
+    </header>
+
+    <div class="max-w-xl mx-auto p-4">
+
+      <!-- Summary card -->
+      <div id="holdSummary" class="mb-4"></div>
+
+      <!-- Select-all checkbox row (shown after load) -->
+      <div id="holdSelectBar" class="hidden flex items-center gap-2 mb-3">
+        <label class="flex items-center gap-2 cursor-pointer bg-white px-3 py-2 rounded-lg border shadow-sm w-full">
+          <input type="checkbox" id="holdSelectAll" class="w-4 h-4 accent-amber-500 rounded"
+            onchange="toggleSelectAllHold(this.checked)">
+          <span class="text-sm font-medium text-gray-700">เลือกทั้งหมด</span>
+          <span id="holdSelectedCount" class="text-xs text-amber-600 ml-auto"></span>
+        </label>
+      </div>
+
+      <!-- Action buttons -->
+      <div id="holdActionBar" class="hidden flex gap-2 mb-4">
+        <!-- Unhold button -->
+        <button onclick="unmarkHoldParcels()" class="flex items-center gap-2 flex-1 justify-center
+                 bg-gray-100 hover:bg-gray-200 text-gray-700 active:scale-95 transition
+                 border border-gray-300 text-sm font-medium px-4 py-3 rounded-xl shadow-sm">
+          <span class="material-symbols-outlined text-[18px]">undo</span>
+          นำออกจาก Hold
+        </button>
+        <!-- Delete unreceived button -->
+        <button onclick="deleteUnreceivedHold()" class="flex items-center gap-2 flex-1 justify-center
+                 bg-red-500 hover:bg-red-600 active:scale-95 transition
+                 text-white text-sm font-medium px-4 py-3 rounded-xl shadow">
+          <span class="material-symbols-outlined text-[18px]">delete_sweep</span>
+          ลบที่ยังไม่รับ
+        </button>
+      </div>
+
+      <!-- List -->
+      <div id="holdList"></div>
+
+    </div>
+  </div>
+  <!-- ================= /Hold List Page ================= -->
 
   <!-- ================= Dashboard Page ================= -->
   <div id="dashboardPage" class="fixed inset-0 bg-[#fafafa] hidden overflow-y-auto z-50">
@@ -2671,14 +2761,25 @@ ${recipientHtml}
                 </div>
               </div>`;
 
+            // show/hide select bar & hold button
+            const selectBar = document.getElementById("strandedSelectBar");
+            const addHoldBtn = document.getElementById("addToHoldBtn");
             if (data.total === 0) {
               listEl.innerHTML = `
                 <div class="text-center text-gray-400 text-sm py-10">
                   <span class="material-symbols-outlined text-[40px] block mb-2">inventory_2</span>
                   ไม่มีพัสดุตกค้าง
                 </div>`;
+              selectBar.classList.add("hidden");
+              addHoldBtn.hidden = true;
               return;
             }
+
+            selectBar.classList.remove("hidden");
+            addHoldBtn.hidden = false;
+            // reset select-all
+            document.getElementById("strandedSelectAll").checked = false;
+            updateStrandedSelectedCount();
 
             // --- Grouped by date ---
             const html = data.groups.map(group => {
@@ -2696,34 +2797,45 @@ ${recipientHtml}
                 const name = p.unofficial_recipient || p.recipient_name || "-";
 
                 return `
-                  <div class="bg-white rounded-xl border border-gray-100 px-4 py-3 flex flex-col gap-1 shadow-sm">
-                    <div class="flex items-center justify-between">
-                      <span class="text-xs font-mono text-gray-700 break-all">${escapeHtml(p.tracking_number)}</span>
-                      <span class="text-xs px-2 py-0.5 rounded-full font-medium ${badgeCls} ml-2 whitespace-nowrap">
-                        ${p.days_stranded} วัน
-                      </span>
-                    </div>
-                    <!-- ชื่อหน้ากล่อง highlight -->
-                    <div class="flex items-center gap-1.5">
-                      <span class="material-symbols-outlined text-purple-400 text-[15px]">badge</span>
-                      ${name !== "-"
+                  <div class="bg-white rounded-xl border border-gray-100 px-4 py-3 flex gap-3 shadow-sm stranded-card" data-id="${p.id}">
+                    <!-- checkbox -->
+                    <label class="flex items-start pt-1 cursor-pointer">
+                      <input type="checkbox" class="stranded-cb w-4 h-4 accent-amber-500 rounded" value="${p.id}"
+                             onchange="onStrandedCbChange()">
+                    </label>
+                    <div class="flex-1 flex flex-col gap-1">
+                      <div class="flex items-center justify-between">
+                        <span class="text-xs font-mono text-gray-700 break-all">${escapeHtml(p.tracking_number)}</span>
+                        <span class="text-xs px-2 py-0.5 rounded-full font-medium ${badgeCls} ml-2 whitespace-nowrap">
+                          ${p.days_stranded} วัน
+                        </span>
+                      </div>
+                      <!-- ชื่อหน้ากล่อง highlight -->
+                      <div class="flex items-center gap-1.5">
+                        <span class="material-symbols-outlined text-purple-400 text-[15px]">badge</span>
+                        ${name !== "-"
                     ? `<span class="text-sm font-semibold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-lg border border-purple-200">${escapeHtml(name)}</span>`
                     : `<span class="text-xs text-gray-400 italic">ไม่ระบุชื่อ</span>`
                   }
-                    </div>
-                    <div class="flex gap-4 text-xs text-gray-500">
-                      <span>เลขคิว <span class="font-semibold text-gray-700">${escapeHtml(p.queue_number ?? "-")}</span></span>
-                      <span>เข้าเมื่อ: <span class="font-semibold text-gray-700">${formatThaiDate(p.created_at)}</span></span>
+                      </div>
+                      <div class="flex gap-4 text-xs text-gray-500">
+                        <span>เลขคิว <span class="font-semibold text-gray-700">${escapeHtml(p.queue_number ?? "-")}</span></span>
+                        <span>เข้าเมื่อ: <span class="font-semibold text-gray-700">${formatThaiDate(p.created_at)}</span></span>
+                      </div>
                     </div>
                   </div>`;
               }).join("");
 
               return `
                 <div class="mb-5">
-                  <div class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2 px-1">
-                    วันที่ ${dateLabel}
+                  <div class="flex items-center gap-2 mb-2 px-1">
+                    <input type="checkbox" class="w-4 h-4 accent-amber-500 rounded cursor-pointer"
+                           onchange="toggleStrandedGroup('${group.date}', this.checked)">
+                    <div class="text-xs font-semibold text-gray-400 uppercase tracking-wide">
+                      วันที่ ${dateLabel} (${group.items.length} ชิ้น)
+                    </div>
                   </div>
-                  <div class="flex flex-col gap-2">${rows}</div>
+                  <div class="flex flex-col gap-2" id="stranded-group-${group.date}">${rows}</div>
                 </div>`;
             }).join("");
 
@@ -2825,8 +2937,20 @@ ${recipientHtml}
             dateInput.value = todayISO
           }
 
-          // โหลดพัสดุของวันนี้ทันที
-          loadWaitingParcels()
+          // แสดงข้อความเริ่มต้นแทนการโหลดพัสดุอัตโนมัติ
+          const box = document.getElementById("parcelList");
+          if (box) {
+            box.innerHTML = `<div class="text-sm text-gray-500 text-center py-4">กรุณากรอกเลขคิวหรือชื่อหน้ากล่อง</div>`;
+          }
+        }
+
+        function openCalendar() {
+          const input = document.getElementById("dateFilter");
+          input.value = ""; // ล้างวันที่เดิม
+          input.showPicker();   // เปิดปฏิทิน
+          input.onchange = () => {
+            loadWaitingParcels();
+          };
         }
 
         function toggleMoreMenu() {
@@ -2898,6 +3022,312 @@ ${recipientHtml}
               err.message
             );
 
+          }
+        }
+      </script>
+
+      <!-- ============================================================
+           Hold List JavaScript
+      ============================================================ -->
+      <script>
+        /* ---- Stranded page: checkbox helpers ---- */
+
+        function onStrandedCbChange() {
+          updateStrandedSelectedCount();
+          const all = document.querySelectorAll(".stranded-cb");
+          const checked = document.querySelectorAll(".stranded-cb:checked");
+          const selectAllCb = document.getElementById("strandedSelectAll");
+          if (selectAllCb) {
+            selectAllCb.checked = all.length > 0 && checked.length === all.length;
+            selectAllCb.indeterminate = checked.length > 0 && checked.length < all.length;
+          }
+        }
+
+        function toggleStrandedGroup(dateKey, checked) {
+          const container = document.getElementById(`stranded-group-${dateKey}`);
+          if (container) {
+            container.querySelectorAll('.stranded-cb').forEach(cb => { cb.checked = checked; });
+            onStrandedCbChange();
+          }
+        }
+
+        function toggleSelectAllStranded(checked) {
+          document.querySelectorAll(".stranded-cb").forEach(cb => { cb.checked = checked; });
+          updateStrandedSelectedCount();
+        }
+
+        function updateStrandedSelectedCount() {
+          const checked = document.querySelectorAll(".stranded-cb:checked");
+          const countEl = document.getElementById("strandedSelectedCount");
+          if (countEl) {
+            countEl.textContent = checked.length > 0 ? `เลือกแล้ว ${checked.length} รายการ` : "";
+          }
+        }
+
+        function getSelectedStrandedIds() {
+          return Array.from(document.querySelectorAll(".stranded-cb:checked"))
+            .map(cb => parseInt(cb.value));
+        }
+
+        async function addStrandedToHold() {
+          const ids = getSelectedStrandedIds();
+          if (ids.length === 0) {
+            alert("กรุณาเลือกพัสดุอย่างน้อย 1 รายการ");
+            return;
+          }
+          if (!confirm(`เพิ่มพัสดุที่เลือก ${ids.length} รายการเข้า Hold List ใช่หรือไม่?`)) return;
+
+          try {
+            const res = await fetch("/api/parcels/hold", {
+              method: "POST",
+              credentials: "include",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ parcel_ids: ids })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.detail || "เพิ่มเข้า Hold ไม่สำเร็จ");
+            alert(`เพิ่มเข้า Hold List เรียบร้อย ${data.updated} รายการ`);
+            loadStrandedParcels(currentStrandedDays);
+          } catch (err) {
+            alert("เกิดข้อผิดพลาด: " + err.message);
+          }
+        }
+
+        /* ---- Hold List page ---- */
+
+        async function openHoldListPage() {
+          document.getElementById("moreMenu").classList.add("hidden");
+          adminPage.classList.add("hidden");
+          document.getElementById("holdListPage").classList.remove("hidden");
+          await loadHoldList();
+        }
+
+        function closeHoldListPage() {
+          document.getElementById("holdListPage").classList.add("hidden");
+          adminPage.classList.remove("hidden");
+        }
+
+        async function refreshHoldList() {
+          await loadHoldList();
+        }
+
+        async function loadHoldList() {
+          const summaryEl = document.getElementById("holdSummary");
+          const listEl = document.getElementById("holdList");
+          const actionBar = document.getElementById("holdActionBar");
+          const selectBar = document.getElementById("holdSelectBar");
+
+          summaryEl.innerHTML = `<div class="text-sm text-gray-400 text-center py-4">กำลังโหลด...</div>`;
+          listEl.innerHTML = "";
+          actionBar.classList.add("hidden");
+          selectBar.classList.add("hidden");
+
+          try {
+            const res = await fetch("/api/parcels/hold", { credentials: "include" });
+            if (!res.ok) throw new Error(`โหลดข้อมูลไม่สำเร็จ (status ${res.status})`);
+            const data = await res.json();
+
+            let unreceivedCount = 0;
+            let receivedCount = 0;
+            if (data.groups) {
+              data.groups.forEach(g => {
+                g.items.forEach(p => {
+                  if (p.received) receivedCount++;
+                  else unreceivedCount++;
+                });
+              });
+            }
+
+            summaryEl.innerHTML = `
+              <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center gap-3">
+                <span class="material-symbols-outlined text-amber-500 text-[28px]">inventory</span>
+                <div>
+                  <div class="text-sm text-amber-700 font-medium">พัสดุใน Hold List ทั้งหมด</div>
+                  <div class="text-2xl font-bold text-amber-800">${data.total} ชิ้น</div>
+                  <div class="text-xs text-amber-600 mt-0.5">ยังไม่รับ ${unreceivedCount} · รับแล้ว ${receivedCount}</div>
+                </div>
+              </div>`;
+
+            if (data.total === 0) {
+              listEl.innerHTML = `
+                <div class="text-center text-gray-400 text-sm py-10">
+                  <span class="material-symbols-outlined text-[40px] block mb-2">inventory</span>
+                  ไม่มีพัสดุใน Hold List
+                </div>`;
+              return;
+            }
+
+            actionBar.classList.remove("hidden");
+            selectBar.classList.remove("hidden");
+            document.getElementById("holdSelectAll").checked = false;
+            updateHoldSelectedCount();
+
+            const html = data.groups.map(group => {
+              const [y, m, d] = group.date.split("-");
+              const be_year = parseInt(y) + 543;
+              const dateLabel = `${d}/${m}/${be_year}`;
+
+              const rows = group.items.map(p => {
+                const name = p.unofficial_recipient || p.recipient_name || "-";
+                const receivedBadge = p.received
+                  ? `<span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">รับแล้ว</span>`
+                  : `<span class="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-medium">ยังไม่รับ</span>`;
+
+                let ageBadgeCls = "bg-yellow-100 text-yellow-700";
+                if (p.days_stranded >= 180) ageBadgeCls = "bg-red-100 text-red-700";
+                else if (p.days_stranded >= 90) ageBadgeCls = "bg-orange-100 text-orange-700";
+
+                return `
+                  <div class="bg-white rounded-xl border border-gray-100 px-4 py-3 flex gap-3 shadow-sm mb-2" data-id="${p.id}" data-received="${p.received}">
+                    <label class="flex items-start pt-1 cursor-pointer">
+                      <input type="checkbox" class="hold-cb w-4 h-4 accent-amber-500 rounded" value="${p.id}"
+                             onchange="onHoldCbChange()">
+                    </label>
+                    <div class="flex-1 flex flex-col gap-1">
+                      <div class="flex items-center justify-between gap-2 flex-wrap">
+                        <span class="text-xs font-mono text-gray-700 break-all flex-1">${escapeHtml(p.tracking_number)}</span>
+                        <div class="flex gap-1 flex-shrink-0">
+                          ${receivedBadge}
+                          <span class="text-xs px-2 py-0.5 rounded-full font-medium ${ageBadgeCls}">${p.days_stranded} วัน</span>
+                        </div>
+                      </div>
+                      <div class="flex items-center gap-1.5">
+                        <span class="material-symbols-outlined text-purple-400 text-[15px]">badge</span>
+                        ${name !== "-"
+                    ? `<span class="text-sm font-semibold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-lg border border-purple-200">${escapeHtml(name)}</span>`
+                    : `<span class="text-xs text-gray-400 italic">ไม่ระบุชื่อ</span>`}
+                      </div>
+                      <div class="flex gap-4 text-xs text-gray-500">
+                        <span>เลขคิว <span class="font-semibold text-gray-700">${escapeHtml(p.queue_number ?? "-")}</span></span>
+                        <span>เข้าเมื่อ: <span class="font-semibold text-gray-700">${formatThaiDate(p.created_at)}</span></span>
+                      </div>
+                    </div>
+                  </div>`;
+              }).join("");
+
+              return `
+                <div class="mb-5">
+                  <div class="flex items-center gap-2 mb-2 px-1">
+                    <input type="checkbox" class="w-4 h-4 accent-amber-500 rounded cursor-pointer"
+                           onchange="toggleHoldGroup('${group.date}', this.checked)">
+                    <div class="text-xs font-semibold text-gray-400 uppercase tracking-wide">
+                      วันที่ ${dateLabel} (${group.items.length} ชิ้น)
+                    </div>
+                  </div>
+                  <div class="flex flex-col gap-2" id="hold-group-${group.date}">${rows}</div>
+                </div>`;
+            }).join("");
+
+            listEl.innerHTML = html;
+
+          } catch (err) {
+            summaryEl.innerHTML = `<div class="text-sm text-red-400 text-center py-4">${err.message}</div>`;
+          }
+        }
+
+        /* ---- Hold List checkbox helpers ---- */
+
+        function onHoldCbChange() {
+          updateHoldSelectedCount();
+          const all = document.querySelectorAll(".hold-cb");
+          const checked = document.querySelectorAll(".hold-cb:checked");
+          const selectAllCb = document.getElementById("holdSelectAll");
+          if (selectAllCb) {
+            selectAllCb.checked = all.length > 0 && checked.length === all.length;
+            selectAllCb.indeterminate = checked.length > 0 && checked.length < all.length;
+          }
+        }
+
+        function toggleSelectAllHold(checked) {
+          document.querySelectorAll(".hold-cb").forEach(cb => { cb.checked = checked; });
+          updateHoldSelectedCount();
+        }
+
+        function toggleHoldGroup(dateKey, checked) {
+          const container = document.getElementById(`hold-group-${dateKey}`);
+          if (container) {
+            container.querySelectorAll('.hold-cb').forEach(cb => { cb.checked = checked; });
+            onHoldCbChange();
+          }
+        }
+
+        function updateHoldSelectedCount() {
+          const checked = document.querySelectorAll(".hold-cb:checked");
+          const countEl = document.getElementById("holdSelectedCount");
+          if (countEl) {
+            countEl.textContent = checked.length > 0 ? `เลือกแล้ว ${checked.length} รายการ` : "";
+          }
+        }
+
+        function getSelectedHoldIds() {
+          return Array.from(document.querySelectorAll(".hold-cb:checked"))
+            .map(cb => parseInt(cb.value));
+        }
+
+        async function unmarkHoldParcels() {
+          const ids = getSelectedHoldIds();
+          if (ids.length === 0) {
+            alert("กรุณาเลือกพัสดุอย่างน้อย 1 รายการเพื่อนำออก");
+            return;
+          }
+          if (!confirm(`ต้องการนำพัสดุที่เลือก ${ids.length} รายการออกจาก Hold List ใช่หรือไม่?`)) return;
+
+          try {
+            const res = await fetch("/api/parcels/unhold", {
+              method: "POST",
+              credentials: "include",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ parcel_ids: ids })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.detail || "นำออกไม่สำเร็จ");
+            alert(`นำออกจาก Hold List เรียบร้อย ${data.updated} รายการ`);
+            await loadHoldList();
+
+            // refresh stranded list too in the background
+            loadStrandedParcels(currentStrandedDays);
+          } catch (err) {
+            alert("เกิดข้อผิดพลาด: " + err.message);
+          }
+        }
+
+        async function deleteUnreceivedHold() {
+          const ids = getSelectedHoldIds();
+          if (ids.length === 0) {
+            alert("กรุณาเลือกพัสดุอย่างน้อย 1 รายการเพื่อลบ");
+            return;
+          }
+
+          // filter only unreceived from selected
+          const unreceivedIds = Array.from(document.querySelectorAll(".hold-cb:checked"))
+            .filter(cb => cb.closest('[data-received="false"]'))
+            .map(cb => parseInt(cb.value));
+
+          if (unreceivedIds.length === 0) {
+            alert("รายการที่เลือกทั้งหมดถูก 'รับแล้ว' จึงไม่สามารถลบได้");
+            return;
+          }
+
+          if (unreceivedIds.length < ids.length) {
+            if (!confirm(`คุณเลือก ${ids.length} รายการ แต่มีเพียง ${unreceivedIds.length} รายการที่ 'ยังไม่รับ'\nต้องการดำเนินการลบเฉพาะ ${unreceivedIds.length} รายการนี้ใช่หรือไม่?`)) return;
+          } else {
+            if (!confirm(`ต้องการลบพัสดุที่ยังไม่รับจำนวน ${unreceivedIds.length} รายการ ใช่หรือไม่?\n(การกระทำนี้ไม่สามารถยกเลิกได้)`)) return;
+          }
+
+          try {
+            const delRes = await fetch("/api/parcels/hold", {
+              method: "DELETE",
+              credentials: "include",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ parcel_ids: unreceivedIds })
+            });
+            const delData = await delRes.json();
+            if (!delRes.ok) throw new Error(delData.detail || "ลบไม่สำเร็จ");
+
+            alert(`ลบเรียบร้อย ${delData.deleted} รายการ`);
+            await loadHoldList();
+          } catch (err) {
+            alert("เกิดข้อผิดพลาด: " + err.message);
           }
         }
       </script>
