@@ -239,9 +239,10 @@ hover:bg-red-100 active:scale-95 transition">
         <input id="recipientSearch" placeholder="ค้นหาชื่อหน้ากล่อง" class="border px-3 py-2 rounded-xl text-sm w-32">
 
         <!-- search button -->
-        <input id="dateFilter" type="date" class="hidden">
+        <input id="dateFilter" type="date" onchange="loadWaitingParcels()" class="border px-3 py-2 rounded-xl text-sm w-36
+                 focus:ring-2 focus:ring-orange-400 focus:outline-none">
 
-        <button type="button" onclick="openCalendar()"
+        <button type="button" onclick="loadWaitingParcels()"
           class="bg-orange-500 hover:bg-orange-600 transition text-white px-4 py-2 rounded-xl text-sm shadow">
           ค้นหา
         </button>
@@ -785,8 +786,7 @@ hover:bg-red-100 active:scale-95 transition">
           <h3 id="summaryChartTitle" class="font-semibold text-slate-700 text-sm">
             สถิติพัสดุเข้า-ออก (วันนี้ รายชั่วโมง)
           </h3>
-          <select id="chartModeSelect" onchange="onChartModeChange()"
-            class="appearance-none rounded-xl border border-gray-200 bg-white
+          <select id="chartModeSelect" onchange="onChartModeChange()" class="appearance-none rounded-xl border border-gray-200 bg-white
                    px-3 py-1.5 text-xs font-medium text-gray-600 min-w-[140px]
                    shadow-sm transition hover:border-orange-300
                    focus:outline-none focus:ring-2 focus:ring-orange-400">
@@ -1663,7 +1663,7 @@ hover:bg-red-100 active:scale-95 transition">
           const orangeGrad = ctx.createLinearGradient(0, 0, 0, 180);
           orangeGrad.addColorStop(0, 'rgba(249,115,22,0.25)');
           orangeGrad.addColorStop(1, 'rgba(249,115,22,0)');
-          
+
           chartInst = new Chart(ctx, {
             type: 'line',
             data: {
@@ -1704,14 +1704,14 @@ hover:bg-red-100 active:scale-95 transition">
                 legend: { position: 'top', labels: { usePointStyle: true, pointStyle: 'circle', boxWidth: 8, boxHeight: 8, padding: 12, font: { size: 11 } } },
                 tooltip: { backgroundColor: 'rgba(255, 255, 255, 0.95)', titleColor: '#1e293b', bodyColor: '#475569', borderColor: '#e2e8f0', borderWidth: 1, padding: 12, cornerRadius: 8, boxPadding: 6, usePointStyle: true }
               },
-              scales: { 
+              scales: {
                 x: { grid: { display: false } },
-                y: { beginAtZero: true, border: { display: false }, grid: { borderDash: [5, 5], color: '#f1f5f9' } } 
+                y: { beginAtZero: true, border: { display: false }, grid: { borderDash: [5, 5], color: '#f1f5f9' } }
               }
             }
           });
         }
-        
+
         /* ============================================================
            Chart Mode Switcher
         ============================================================ */
@@ -1813,9 +1813,9 @@ hover:bg-red-100 active:scale-95 transition">
                 legend: { position: 'top', labels: { usePointStyle: true, pointStyle: 'circle', padding: 12, font: { size: 11 } } },
                 tooltip: { backgroundColor: 'rgba(255, 255, 255, 0.95)', titleColor: '#1e293b', bodyColor: '#475569', borderColor: '#e2e8f0', borderWidth: 1, padding: 12, cornerRadius: 8, boxPadding: 6, usePointStyle: true }
               },
-              scales: { 
+              scales: {
                 x: { grid: { display: false } },
-                y: { beginAtZero: true, border: { display: false }, grid: { borderDash: [5, 5], color: '#f1f5f9' } } 
+                y: { beginAtZero: true, border: { display: false }, grid: { borderDash: [5, 5], color: '#f1f5f9' } }
               }
             }
           });
@@ -1892,7 +1892,7 @@ hover:bg-red-100 active:scale-95 transition">
                 legend: { display: false },
                 tooltip: { backgroundColor: 'rgba(255, 255, 255, 0.95)', titleColor: '#1e293b', bodyColor: '#475569', borderColor: '#e2e8f0', borderWidth: 1, padding: 12, cornerRadius: 8 }
               },
-              scales: { 
+              scales: {
                 x: { beginAtZero: true, border: { display: false }, grid: { borderDash: [5, 5], color: '#f1f5f9' } },
                 y: { grid: { display: false }, ticks: { font: { size: 10 } } }
               }
@@ -2818,13 +2818,12 @@ ${recipientHtml}
           const yyyy = thai.getFullYear()
 
           // ✅ ต้องมี backtick
-          const todaySlash = `${dd}/${mm}/${yyyy}`
+          const todayISO = `${yyyy}-${mm}-${dd}`
 
           const dateInput = document.getElementById("dateFilter")
           if (dateInput) {
-            dateInput.value = todaySlash
+            dateInput.value = todayISO
           }
-
           // โหลดพัสดุของวันนี้ทันที
           loadWaitingParcels()
         }
@@ -2899,18 +2898,6 @@ ${recipientHtml}
             );
 
           }
-        }
-
-        function openCalendar() {
-
-          const input = document.getElementById("dateFilter");
-
-          input.showPicker();   // เปิดปฏิทิน
-
-          input.onchange = () => {
-            loadWaitingParcels();
-          };
-
         }
       </script>
 
