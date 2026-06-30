@@ -189,7 +189,7 @@
     const res = await fetch("/api/login_client", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",   // ⭐ สำคัญ
+        credentials: "include",   // สำคัญ
         body: JSON.stringify({
             carrier_id: selectedCarrierId,
             carrier_staff_name: staff
@@ -208,7 +208,7 @@
         document.getElementById("selectedCarrier").innerText
     )
 
-    // ✅ login สำเร็จ ค่อยเข้า client
+    // login สำเร็จ ค่อยเข้า client
     location.href = "/client"
 }
 

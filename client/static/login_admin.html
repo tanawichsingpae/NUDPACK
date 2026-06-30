@@ -146,7 +146,7 @@ const r = await fetch("/admin/login",{
 
 console.log("STATUS =", r.status)
 
-// 🔥 force popup
+// force popup
 if(r.status === 401){
     showAlert("รหัสผ่านไม่ถูกต้อง")
     return

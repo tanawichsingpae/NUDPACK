@@ -35,7 +35,7 @@ class Parcel(Base):
 class DailyCounter(Base):
     __tablename__ = "daily_counters"
     __table_args__ = (
-        UniqueConstraint('date', name='uix_date'),  # ❗ เอา carrier_id ออก
+        UniqueConstraint('date', name='uix_date'),  # เอา carrier_id ออก
     )
 
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -93,7 +93,7 @@ class QueueReservation(Base):
     start_seq = Column(Integer, nullable=False)
     end_seq = Column(Integer, nullable=False)
 
-    current_seq = Column(Integer, nullable=False)   # 👈 เพิ่ม
+    current_seq = Column(Integer, nullable=False)   # เพิ่ม
     status = Column(String, default="active") 
     section_id = Column(Integer, ForeignKey("queue_sections.id"))
 

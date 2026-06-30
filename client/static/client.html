@@ -97,7 +97,7 @@ hover:bg-red-100 active:scale-95 transition">
     <section class="p-4 mt-4">
       <div class="bg-white rounded-xl p-4 scan-zone shadow-sm">
 
-        <!-- 🔹 จำนวนพัสดุ -->
+        <!--  จำนวนพัสดุ -->
         <label class="text-sm font-semibold text-orange-400">
           กรอกจำนวนพัสดุ
         </label>
@@ -128,7 +128,7 @@ hover:bg-red-100 active:scale-95 transition">
 
         <div class="border-t my-5"></div>
 
-        <!-- 🔒 กรอกเลขพัสดุ -->
+        <!--  กรอกเลขพัสดุ -->
         <div class="flex flex-col gap-1 mb-2">
           <label class="flex items-center gap-2 cursor-pointer">
             <input type="checkbox" id="unofficialCheck"
@@ -155,7 +155,7 @@ hover:bg-red-100 active:scale-95 transition">
           </button>
         </div>
 
-        <!-- 🔒 ปุ่มกล้อง -->
+        <!--  ปุ่มกล้อง -->
         <div class="flex gap-3 mt-4">
           <button id="cameraOnBtn" disabled onclick="startCamera()"
             class="flex-1 bg-gray-400 text-white rounded-lg h-12 flex justify-center items-center gap-2">
@@ -420,8 +420,8 @@ hover:bg-red-100 active:scale-95 transition">
           body: JSON.stringify({
             tracking_number: tracking,
             provisional: true,
-            section_id: selectedSections[0],  //  ใช้ตัวแรก
-            unofficial_recipient: unofficialVal // 👈 ส่งค่าไป
+            section_id: selectedSections[0],  // ใช้ตัวแรก
+            unofficial_recipient: unofficialVal // ส่งค่าไป
           })
         })
 
@@ -435,15 +435,15 @@ hover:bg-red-100 active:scale-95 transition">
 
         const data = await r.json()
 
-        // 🔥 ใช้ queue จาก backend
+        // ใช้ queue จาก backend
         addPreview(tracking, data.queue_number, data.status, selectedSections[0])
 
-        // ✅ Reset unofficial inputs
+        // Reset unofficial inputs
         unofficialCheck.checked = false
         unofficialName.value = ""
         unofficialName.classList.add("hidden")
 
-        // ✅ Reset scan input
+        // Reset scan input
         scanInput.value = ""
 
 
@@ -462,7 +462,7 @@ hover:bg-red-100 active:scale-95 transition">
         tracking: t,
         queue: q,
         status: s,
-        section_id: sectionId,   // 👈 เพิ่มตรงนี้
+        section_id: sectionId,   // เพิ่มตรงนี้
         created_at: new Date().toISOString()
       })
 
@@ -587,13 +587,13 @@ ${new Date(p.created_at).toLocaleString("th-TH", { timeZone: "Asia/Bangkok" })}
         console.error("cancel error", e)
       }
 
-      // 🔥 ล้าง localStorage
+      // ล้าง localStorage
       localStorage.removeItem("parcelAmount")
       localStorage.removeItem("selectedSections")
       localStorage.removeItem("reserveLocked")
       localStorage.removeItem("preview")
 
-      // 🔥 logout session server
+      // logout session server
       fetch("/logout", {
         credentials: "include"
       }).finally(() => {
@@ -629,12 +629,12 @@ ${new Date(p.created_at).toLocaleString("th-TH", { timeZone: "Asia/Bangkok" })}
         return
       }
 
-      // 🔥 ห้ามล้าง selectedSections ถ้าเราจองแล้ว
+      // ห้ามล้าง selectedSections ถ้าเราจองแล้ว
       if (!reserveLocked) {
         selectedSections = []
       }
 
-      // 🔥 ต้องส่ง amount ไปด้วย
+      // ต้องส่ง amount ไปด้วย
       const res = await fetch(`${SERVER}/api/queue/sections_available?amount=${amount}`)
 
       const sections = await res.json()
@@ -685,16 +685,16 @@ ${new Date(p.created_at).toLocaleString("th-TH", { timeZone: "Asia/Bangkok" })}
         showAlert("จองคิวสำเร็จแล้ว", "success", "สำเร็จ")
 
         reserveLocked = true
-        // ✅ บันทึก state ลง localStorage
+        // บันทึก state ลง localStorage
         localStorage.setItem("parcelAmount", document.getElementById("parcelAmount").value)
         localStorage.setItem("selectedSections", JSON.stringify(selectedSections))
         localStorage.setItem("reserveLocked", "true")
 
 
-        // 🔥 reload sections ใหม่ให้กลายเป็นสีเทา
+        // reload sections ใหม่ให้กลายเป็นสีเทา
         await loadAvailableSections()
 
-        // 🔓 เปิด scan
+        // เปิด scan
         const input = document.getElementById("scanInput")
         const scanBtn = document.getElementById("scanBtn")
         const camBtn = document.getElementById("cameraOnBtn")
@@ -740,7 +740,7 @@ ${new Date(p.created_at).toLocaleString("th-TH", { timeZone: "Asia/Bangkok" })}
         const isSelected = selectedSections.includes(s.id)
         const isLimitReached = selectedSections.length >= maxAllowed
 
-        // ✅ คำนวณ full จากตัวเลขแทน
+        // คำนวณ full จากตัวเลขแทน
         const current = (s.current_seq ?? (s.start_seq - 1))
         const isFull = current >= s.end_seq
 
@@ -775,7 +775,7 @@ ${new Date(p.created_at).toLocaleString("th-TH", { timeZone: "Asia/Bangkok" })}
           ${(!isFull && s.status !== "blocked") ? "cursor-pointer" : ""}
         `
 
-        // 🔥 disable ถ้าเกิน limit
+        // disable ถ้าเกิน limit
         if (!isSelected && isLimitReached) {
           card.classList.add("opacity-40", "pointer-events-none")
         }
@@ -800,7 +800,7 @@ ${new Date(p.created_at).toLocaleString("th-TH", { timeZone: "Asia/Bangkok" })}
           </div>
         `
 
-        // ✅ กดได้เฉพาะที่ไม่ full และไม่ blocked
+        // กดได้เฉพาะที่ไม่ full และไม่ blocked
         if (!isFull && (s.status === "available" || s.status === "mine")) {
           card.onclick = () => selectSection(s.id)
         }
@@ -808,7 +808,7 @@ ${new Date(p.created_at).toLocaleString("th-TH", { timeZone: "Asia/Bangkok" })}
         grid.appendChild(card)
       })
 
-      // 🔥 ปุ่มแสดงเพิ่มเติม
+      // ปุ่มแสดงเพิ่มเติม
       if (sortedSections.some(s => s.end_seq > showLimit)) {
 
         const moreBtn = document.createElement("button")
@@ -832,14 +832,14 @@ ${new Date(p.created_at).toLocaleString("th-TH", { timeZone: "Asia/Bangkok" })}
     `
 
         moreBtn.onclick = () => {
-          showLimit += 900   // จาก 600 → 1500
+          showLimit += 900   // จาก 600  1500
           renderSections()
         }
 
         grid.appendChild(moreBtn)
       }
 
-      // 🔥 ปุ่มแสดงน้อยลง (ถ้าเกิน 600 แล้ว)
+      // ปุ่มแสดงน้อยลง (ถ้าเกิน 600 แล้ว)
       if (showLimit > 600) {
 
         const lessBtn = document.createElement("button")
@@ -905,7 +905,7 @@ ${new Date(p.created_at).toLocaleString("th-TH", { timeZone: "Asia/Bangkok" })}
 
   const popup = document.getElementById("confirmPopup")
 
-  // 🔥 เปลี่ยนหัว
+  // เปลี่ยนหัว
   document.getElementById("confirmTitle").innerText = "ยกเลิกการจอง"
 
   document.getElementById("confirmMessage").innerText =
@@ -972,13 +972,13 @@ ${new Date(p.created_at).toLocaleString("th-TH", { timeZone: "Asia/Bangkok" })}
       const section = availableSections.find(s => s.id === id)
       if (!section) return
 
-      // ✅ ถ้าเป็น mine = กดยกเลิกจอง
+      // ถ้าเป็น mine = กดยกเลิกจอง
       if (section.status === "mine") {
         cancelReserve(id)
         return
       }
 
-      // ✅ ถ้าจองล็อกแล้ว ห้ามเลือกใหม่
+      // ถ้าจองล็อกแล้ว ห้ามเลือกใหม่
       if (reserveLocked) return
 
       const maxAllowed = getMaxSectionsAllowed()
@@ -1106,7 +1106,7 @@ ${new Date(p.created_at).toLocaleString("th-TH", { timeZone: "Asia/Bangkok" })}
   const popup = document.getElementById("confirmPopup")
   const confirmBtn = popup.querySelector("button.bg-red-500")
 
-  // 🔥 reset ปุ่มกลับเป็น confirmAll
+  // reset ปุ่มกลับเป็น confirmAll
   confirmBtn.innerText = "ยืนยัน"
   confirmBtn.onclick = confirmAll
 

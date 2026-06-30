@@ -541,7 +541,7 @@ hover:bg-red-100 active:scale-95 transition">
             return;
           }
           const info = await res.json();
-          // ถ้าได้รับแล้ว → popup แจ้ง
+          // ถ้าได้รับแล้ว  popup แจ้ง
           if (info.status === "PICKED_UP" || info.status === "ได้รับแล้ว") {
 
             document.getElementById("alreadyBox").innerHTML = `
@@ -1068,10 +1068,10 @@ hover:bg-red-100 active:scale-95 transition">
       const removeBtn = document.getElementById('removeBtn');
 
       if (reportEditMode) {
-        removeBtn.hidden = false;   // 👉 เข้าโหมดแก้ไข = โชว์
+        removeBtn.hidden = false;   // เข้าโหมดแก้ไข = โชว์
         removeBtn.disabled = true; // ยังเลือกไม่ได้
       } else {
-        removeBtn.hidden = true;    // 👉 ออกโหมดแก้ไข = ซ่อน
+        removeBtn.hidden = true;    // ออกโหมดแก้ไข = ซ่อน
         removeBtn.disabled = true;
       }
 
@@ -1172,8 +1172,8 @@ hover:bg-red-100 active:scale-95 transition">
             legend: {
               position: 'top',
               labels: {
-                usePointStyle: true,     // ⭐ สำคัญ
-                pointStyle: 'circle',    // ⭐ วงกลม
+                usePointStyle: true,     // สำคัญ
+                pointStyle: 'circle',    // วงกลม
                 boxWidth: 8,
                 boxHeight: 8,
                 padding: 12,
@@ -1330,7 +1330,7 @@ hover:bg-red-100 active:scale-95 transition">
       try {
 
         await confirmScanner.start(
-          { facingMode: confirmFacingMode }, // ✅ ใช้แบบเดียวกับ mainCamera
+          { facingMode: confirmFacingMode }, // ใช้แบบเดียวกับ mainCamera
           {
             fps: 10,
             qrbox: 250
@@ -1564,7 +1564,7 @@ hover:bg-red-100 active:scale-95 transition">
       fetch("/recipient/logout", {
         credentials: "include"
       }).then(() => {
-        location.replace("/login_recipient")   // 👈 replace ไม่ให้กดย้อน
+        location.replace("/login_recipient")   // replace ไม่ให้กดย้อน
       })
     }
 
@@ -1675,7 +1675,7 @@ ${recipientHtml}
       reportPage.classList.remove("hidden")
 
       await initReports()
-      loadReport()        // 👈 เพิ่มบรรทัดนี้
+      loadReport()        // เพิ่มบรรทัดนี้
     }
 
     function closeReportPage() {

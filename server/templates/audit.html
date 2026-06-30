@@ -153,7 +153,7 @@ hover:bg-red-100 active:scale-95 transition">
   fetch("/admin/logout", {
     credentials: "include"
   }).then(() => {
-    location.replace("/login_admin")   // 👈 replace ไม่ให้กดย้อน
+    location.replace("/login_admin")   // replace ไม่ให้กดย้อน
   })
 }
 const adminName = localStorage.getItem("admin_staff_name")

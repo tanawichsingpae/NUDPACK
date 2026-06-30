@@ -142,7 +142,7 @@ def admin_login_page():
 
 @app.get("/login_admin")
 def login_admin_alias(request: Request):
-    request.session.clear()   # 👈 ตัด session admin ทิ้งทุกครั้ง
+    request.session.clear()   # ตัด session admin ทิ้งทุกครั้ง
     return FileResponse(str(CLIENT_STATIC / "login_admin.html"))
 
 @app.get("/admin/logout")
@@ -165,7 +165,7 @@ def admin_logout(request: Request):
         finally:
             db.close()
 
-    request.session.clear()   # 👈 สำคัญสุด
+    request.session.clear()   # สำคัญสุด
 
     response = RedirectResponse("/login_admin", status_code=302)
 
@@ -181,13 +181,13 @@ def recipient_login_page():
 
 @app.get("/login_recipient")
 def login_recipient_alias(request: Request):
-    request.session.clear()   # 👈 ตัด session admin ทิ้งทุกครั้ง
+    request.session.clear()   # ตัด session admin ทิ้งทุกครั้ง
     return FileResponse(str(CLIENT_STATIC / "login_recipient.html"))
 
 @app.get("/recipient/logout")
 def recipient_logout(request: Request):
 
-    request.session.clear()   # 👈 สำคัญสุด
+    request.session.clear()   # สำคัญสุด
 
     response = RedirectResponse("/login_recipient", status_code=302)
 
@@ -305,22 +305,22 @@ def login(
     request: Request,
     db: Session = Depends(get_db)
 ):
-    # 🔎 หา user เดิม
+    # หา user เดิม
     user = db.query(User).filter(
         User.name == payload.carrier_staff_name
     ).first()
 
-    # ❗ ถ้าไม่มี → สร้างใหม่
+    # ถ้าไม่มี  สร้างใหม่
     if not user:
         user = User(name=payload.carrier_staff_name)
         db.add(user)
         db.commit()
         db.refresh(user)
 
-    # ✅ เก็บ session
+    # เก็บ session
     request.session["carrier_id"] = payload.carrier_id
     request.session["carrier_staff_name"] = payload.carrier_staff_name
-    request.session["user_id"] = user.id   # ⭐ สำคัญมาก
+    request.session["user_id"] = user.id   # สำคัญมาก
 
     return {"ok": True}
 
@@ -329,7 +329,7 @@ def login(
 class ParcelIn(BaseModel):
     tracking_number: str
     recipient_name: Optional[str] = None
-    unofficial_recipient: Optional[str] = None # 👈 เพิ่ม
+    unofficial_recipient: Optional[str] = None # เพิ่ม
     admin_staff_name: Optional[str] = None
     provisional: bool = False
     section_id: int
@@ -369,11 +369,11 @@ def create_parcel(p: ParcelIn, request: Request):
         if existing:
             raise HTTPException(409, "พัสดุชิ้นนี้แสกนแล้ว")
 
-        # 🔥 lock section ที่เลือก
-        # 🔥 หา reservation ที่ยัง active ของ carrier
+        # lock section ที่เลือก
+        # หา reservation ที่ยัง active ของ carrier
         today = thai_now().strftime("%Y%m%d")
 
-        # 🔥 ดึง reservation ทั้งหมดของ carrier วันนี้
+        # ดึง reservation ทั้งหมดของ carrier วันนี้
         reservations = (
             db.query(QueueReservation)
             .filter(
@@ -389,7 +389,7 @@ def create_parcel(p: ParcelIn, request: Request):
         if not reservations:
             raise HTTPException(400, "ยังไม่มีคิวที่จองไว้")
 
-        # 🔥 หา reservation แรกที่ยังไม่เต็ม (เรียงตาม start_seq แล้ว)
+        # หา reservation แรกที่ยังไม่เต็ม (เรียงตาม start_seq แล้ว)
 
         current_reservation = None
 
@@ -406,11 +406,11 @@ def create_parcel(p: ParcelIn, request: Request):
         current_reservation.current_seq = next_queue
         queue_number = str(next_queue)
                 
-        # ❌ ห้าม set full ที่นี่
+        # ห้าม set full ที่นี่
         current_reservation.status = "active"
 
         carrier = db.query(CarrierList).filter(
-            CarrierList.carrier_id == carrier_id   # ✅ ใช้จาก session
+            CarrierList.carrier_id == carrier_id   # ใช้จาก session
         ).first()
         carrier_name = carrier.carrier_name if carrier else "Unknown"
         status = "กำลังรอ" if p.provisional else "ยังไม่ได้รับ"
@@ -420,7 +420,7 @@ def create_parcel(p: ParcelIn, request: Request):
             carrier_staff_name=carrier_staff,
             queue_number=queue_number,
             recipient_name=p.recipient_name,
-            unofficial_recipient=p.unofficial_recipient, # 👈 เพิ่ม
+            unofficial_recipient=p.unofficial_recipient, # เพิ่ม
             admin_staff_name=p.admin_staff_name,
             status=status,
             section_id=current_reservation.section_id
@@ -488,7 +488,7 @@ def confirm_pending(tracking: str, request: Request):
         carrier_name = carrier.carrier_name if carrier else "Unknown"
         
         p.status = "ยังไม่ได้รับ"
-                # 🔥 เปิด section ให้จองได้ (เปลี่ยนเป็นเขียว)
+                # เปิด section ให้จองได้ (เปลี่ยนเป็นเขียว)
         today = thai_now().strftime("%Y%m%d")
 
         active_reservations = db.query(QueueReservation).filter(
@@ -509,7 +509,7 @@ def confirm_pending(tracking: str, request: Request):
                     reservation.status = "unactive"
 
             else:
-                # 🔥 section ที่ไม่ได้ใช้เลย
+                # section ที่ไม่ได้ใช้เลย
                 reservation.status = "unactive"
 
 
@@ -873,7 +873,7 @@ def recipient_list_parcels(
                 except ValueError:
                     pass
 
-                # ถ้าไม่ใช่ → ลอง dd/mm/yyyy
+                # ถ้าไม่ใช่  ลอง dd/mm/yyyy
                 if not d:
                     try:
                         d = datetime.strptime(date, "%d/%m/%Y")
@@ -974,7 +974,7 @@ def list_parcels(
                 except ValueError:
                     pass
 
-                # ถ้าไม่ใช่ → ลอง dd/mm/yyyy
+                # ถ้าไม่ใช่  ลอง dd/mm/yyyy
                 if not d:
                     try:
                         d = datetime.strptime(date, "%d/%m/%Y")
@@ -1099,7 +1099,7 @@ def confirm_pickup(
         if p.picked_up_at:
             p.recipient_name = payload.recipient_name
 
-            # ✅ อัปเดต admin เฉพาะตอนที่ยังเป็น null
+            # อัปเดต admin เฉพาะตอนที่ยังเป็น null
             if not p.admin_staff_name:
                 p.admin_staff_name = admin["name"]
 
@@ -1136,7 +1136,7 @@ def confirm_pickup(
         p.status = "ได้รับแล้ว"
         p.recipient_name = payload.recipient_name
 
-        # ✅ ใส่ admin ได้เลย (ยังไม่เคยรับ)
+        # ใส่ admin ได้เลย (ยังไม่เคยรับ)
         p.admin_staff_name = admin["name"]
         p.picked_up_at = thai_now()
 
@@ -1459,7 +1459,7 @@ def stranded_parcels(
 
         print(f"[stranded] days={days}, now={now}, cutoff={cutoff}")
 
-        # ก่อน filter status → debug ดูจำนวนทั้งหมด
+        # ก่อน filter status  debug ดูจำนวนทั้งหมด
         all_uncollected = (
             db.query(Parcel)
             .filter(Parcel.status.in_(["ยังไม่ได้รับ", "กำลังรอ"]))
@@ -1732,7 +1732,7 @@ def export_report(
         content = buffer.getvalue()
         return Response(
             content=content,
-            media_type="text/csv; charset=utf-8-sig",   # ✅ Excel เปิดไทยไม่เพี้ยน
+            media_type="text/csv; charset=utf-8-sig",   # Excel เปิดไทยไม่เพี้ยน
             headers={
         "Content-Disposition": f"attachment; filename*=UTF-8''{filename_star}"}
         )
@@ -1870,23 +1870,23 @@ def delete_parcel(tracking: str, db: Session = Depends(get_db)):
         )
     section_id = parcel.section_id
 
-    # 🔥 หา reservation ของ section นี้
+    # หา reservation ของ section นี้
     reservation = db.query(QueueReservation).filter(
         QueueReservation.section_id == section_id,
         QueueReservation.date == thai_now().strftime("%Y%m%d")
     ).order_by(QueueReservation.current_seq.desc()).first()
 
 
-    # ✅ ลบ parcel
+    # ลบ parcel
     db.delete(parcel)
 
-    # 🔥 ลด current_seq ลง 1 (แต่ห้ามต่ำกว่า start_seq - 1)
+    # ลด current_seq ลง 1 (แต่ห้ามต่ำกว่า start_seq - 1)
     if reservation:
         new_seq = reservation.current_seq - 1
         min_seq = reservation.start_seq - 1
         reservation.current_seq = max(new_seq, min_seq)
 
-        # 🔥 FIX: อัปเดต status ใหม่
+        # FIX: อัปเดต status ใหม่
         if reservation.current_seq < reservation.end_seq:
             reservation.status = "active"
         else:
@@ -2031,7 +2031,7 @@ def list_audit_logs(
             )
         )
 
-    # 👇 load older than timestamp
+    # load older than timestamp
     if before:
         try:
             before_dt = datetime.fromisoformat(before)
@@ -2090,7 +2090,7 @@ def init_sections():
         db.close()
 
 
-# 🔥 ต้องอยู่นอก finally
+# ต้องอยู่นอก finally
 @app.get("/api/queue/sections")
 def get_sections(db: Session = Depends(get_db)):
 
@@ -2123,7 +2123,7 @@ def get_sections(db: Session = Depends(get_db)):
 
     return result
 
-# 🔥 ต้องอยู่นอก finally
+# ต้องอยู่นอก finally
 from sqlalchemy import func
 
 @app.get("/api/queue/sections_available")
@@ -2155,11 +2155,11 @@ def get_available_sections(
 
             current_seq = reservation.current_seq or (s.start_seq - 1)
 
-            # 🔥 1) ถ้าเต็ม
+            # 1) ถ้าเต็ม
             if reservation.status == "full":
                 status = "full"
 
-            # 🔥 2) ถ้ายัง active
+            # 2) ถ้ายัง active
             elif reservation.status == "active":
 
                 if reservation.user_id == user_id:
@@ -2167,7 +2167,7 @@ def get_available_sections(
                 else:
                     status = "blocked"
 
-            # 🔥 3) ถ้า unactive
+            # 3) ถ้า unactive
             elif reservation.status == "unactive":
                 status = "available"
 
@@ -2212,7 +2212,7 @@ def reserve_section(
 
     for s in sections:
 
-        # 🔥 หา current_seq สูงสุดของวันนี้ใน section นี้
+        # หา current_seq สูงสุดของวันนี้ใน section นี้
         last_used = db.query(func.max(QueueReservation.current_seq)).filter(
             QueueReservation.section_id == s.id,
             QueueReservation.date == today
@@ -2223,7 +2223,7 @@ def reserve_section(
         else:
             start_current = last_used
 
-        # 🔥 เช็คว่ามี active อยู่ไหม
+        # เช็คว่ามี active อยู่ไหม
         active = db.query(QueueReservation).filter(
             QueueReservation.section_id == s.id,
             QueueReservation.date == today,
@@ -2236,7 +2236,7 @@ def reserve_section(
                 f"Section {s.start_seq}-{s.end_seq} กำลังใช้งานอยู่"
             )
 
-        # 🔥 สร้าง reservation ใหม่ โดยใช้ current ต่อจากของเดิม
+        # สร้าง reservation ใหม่ โดยใช้ current ต่อจากของเดิม
         r = QueueReservation(
             section_id=s.id,
             carrier_id=carrier_id,
@@ -2244,7 +2244,7 @@ def reserve_section(
             date=today,
             start_seq=s.start_seq,
             end_seq=s.end_seq,
-            current_seq=start_current,   # ✅ สำคัญ
+            current_seq=start_current,   # สำคัญ
             status="active"
         )
 
@@ -2392,7 +2392,7 @@ def dashboard_today(admin=Depends(require_admin)):
         # --- คำนวณ Alerts ---
         alerts = []
 
-        # 🔴 แดง (Critical): พื้นที่จัดเก็บเต็ม
+        # แดง (Critical): พื้นที่จัดเก็บเต็ม
         full_sections = [s for s in section_data if s["pct"] >= 100]
         if full_sections:
             count = len(full_sections)
@@ -2404,7 +2404,7 @@ def dashboard_today(admin=Depends(require_admin)):
                 "message": f"มีพื้นที่จัดเก็บเต็ม 100% จำนวน {count} ช่อง"
             })
 
-        # 🟠 ส้ม (Warning): พัสดุ "กำลังรอ" ค้างข้ามวัน
+        # ส้ม (Warning): พัสดุ "กำลังรอ" ค้างข้ามวัน
         overnight_pending_count = db.query(sqlfunc.count(Parcel.id)).filter(
             Parcel.status == "กำลังรอ",
             Parcel.created_at < today_start
@@ -2419,7 +2419,7 @@ def dashboard_today(admin=Depends(require_admin)):
                 "action": "force_confirm"
             })
 
-        # 🔵 ฟ้า/เทา (Info): สรุปยอดเคลียร์ของเมื่อวาน
+        # ฟ้า/เทา (Info): สรุปยอดเคลียร์ของเมื่อวาน
         yesterday_start = today_start - timedelta(days=1)
         yesterday_parcels = db.query(Parcel).filter(
             Parcel.created_at >= yesterday_start,
@@ -2437,7 +2437,7 @@ def dashboard_today(admin=Depends(require_admin)):
                 "message": f"เมื่อวานเข้า {y_total} ชิ้น ยังไม่มีคนมารับ {y_waiting} ชิ้น"
             })
 
-        # 🔴 แดง (Audit Log): ความเคลื่อนไหวผิดปกติวันนี้
+        # แดง (Audit Log): ความเคลื่อนไหวผิดปกติวันนี้
         today_audits = db.query(AuditLog).filter(
             AuditLog.timestamp >= today_start
      

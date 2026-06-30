@@ -1084,7 +1084,7 @@ hover:bg-red-100 active:scale-95 transition">
                 return;
               }
               const info = await res.json();
-              // ถ้าได้รับแล้ว → popup แจ้ง
+              // ถ้าได้รับแล้ว  popup แจ้ง
               if (info.status === "PICKED_UP" || info.status === "ได้รับแล้ว") {
 
                 // ==================================
@@ -1092,7 +1092,7 @@ hover:bg-red-100 active:scale-95 transition">
                 // ==================================
                 if (!info.admin_staff_name) {
 
-                  // 🔥 ยันทันที
+                  // ยันทันที
                   fetch(`/api/parcels/${encodeURIComponent(info.tracking)}/confirm_pickup`, {
                     method: "POST",
                     credentials: "include",
@@ -1103,7 +1103,7 @@ hover:bg-red-100 active:scale-95 transition">
                     })
                   })
 
-                  // ✅ แจ้งผล
+                  // แจ้งผล
                   document.getElementById("alreadyBox").innerHTML = `
   <div class="rounded-3xl bg-gradient-to-b from-emerald-50 to-white p-5 text-center shadow-md space-y-3">
 
@@ -1680,10 +1680,10 @@ hover:bg-red-100 active:scale-95 transition">
           const removeBtn = document.getElementById('removeBtn');
 
           if (reportEditMode) {
-            removeBtn.hidden = false;   // 👉 เข้าโหมดแก้ไข = โชว์
+            removeBtn.hidden = false;   // เข้าโหมดแก้ไข = โชว์
             removeBtn.disabled = true; // ยังเลือกไม่ได้
           } else {
-            removeBtn.hidden = true;    // 👉 ออกโหมดแก้ไข = ซ่อน
+            removeBtn.hidden = true;    // ออกโหมดแก้ไข = ซ่อน
             removeBtn.disabled = true;
           }
 
@@ -1952,7 +1952,7 @@ hover:bg-red-100 active:scale-95 transition">
               { credentials: "include" }
             );
             const phData = await phRes.json();
-            // แปลง "07:00" → "07:00-08:00" ให้ตรงกับ format label เดิม
+            // แปลง "07:00"  "07:00-08:00" ให้ตรงกับ format label เดิม
             adata.peak_hours = {
               labels: phData.labels.map(l => {
                 const h = parseInt(l);
@@ -2139,7 +2139,7 @@ hover:bg-red-100 active:scale-95 transition">
           try {
 
             await confirmScanner.start(
-              { facingMode: confirmFacingMode }, // ✅ ใช้แบบเดียวกับ mainCamera
+              { facingMode: confirmFacingMode }, // ใช้แบบเดียวกับ mainCamera
               {
                 fps: 10,
                 qrbox: 250
@@ -2368,7 +2368,7 @@ hover:bg-red-100 active:scale-95 transition">
           fetch("/admin/logout", {
             credentials: "include"
           }).then(() => {
-            location.replace("/login_admin")   // 👈 replace ไม่ให้กดย้อน
+            location.replace("/login_admin")   // replace ไม่ให้กดย้อน
           })
         }
 
@@ -2488,7 +2488,7 @@ ${recipientHtml}
           reportPage.classList.remove("hidden")
 
           await initReports()
-          loadReport()        // 👈 เพิ่มบรรทัดนี้
+          loadReport()        // เพิ่มบรรทัดนี้
         }
 
         function closeReportPage() {
@@ -2783,7 +2783,7 @@ ${recipientHtml}
 
             // --- Grouped by date ---
             const html = data.groups.map(group => {
-              // แปลง YYYY-MM-DD → DD/MM/YYYY (พ.ศ.)
+              // แปลง YYYY-MM-DD  DD/MM/YYYY (พ.ศ.)
               const [y, m, d] = group.date.split("-");
               const be_year = parseInt(y) + 543;
               const dateLabel = `${d}/${m}/${be_year}`;
@@ -2930,7 +2930,7 @@ ${recipientHtml}
           const mm = String(thai.getMonth() + 1).padStart(2, "0")
           const yyyy = thai.getFullYear()
 
-          // ✅ ต้องมี backtick
+          // ต้องมี backtick
           const todayISO = `${yyyy}-${mm}-${dd}`
           const dateInput = document.getElementById("dateFilter")
           if (dateInput) {

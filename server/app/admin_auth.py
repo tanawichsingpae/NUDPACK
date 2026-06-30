@@ -5,7 +5,7 @@ from fastapi.responses import RedirectResponse
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-# 👉 เอา hash ที่คุณ generate ใส่ตรงนี้
+# เอา hash ที่คุณ generate ใส่ตรงนี้
 SYSTEM_ADMIN_PASSWORD_HASH = "$2b$12$xaA57wvXqCDznUsBWB/iLOgGabSb7ib8ocVZsBtFRK72yH633.AdG"
 
 SESSION_SECRET_KEY = "parcel-session-secret"
