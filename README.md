@@ -160,10 +160,7 @@ http://127.0.0.1:8000
 ## 🚀 แนวทางพัฒนาต่อ (Future Improvements)
 
 * 🔔 ระบบแจ้งเตือน (Notification)
-* 📱 รองรับ QR / Barcode
 * 🔗 เชื่อม API บริษัทขนส่ง
-* 📊 Dashboard วิเคราะห์ข้อมูล
-* ☁️ Deploy บน Cloud (Docker, Railway, Render)
 
 ---
 
