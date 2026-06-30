@@ -3157,7 +3157,6 @@ ${recipientHtml}
               return;
             }
 
-            actionBar.classList.remove("hidden");
             selectBar.classList.remove("hidden");
             document.getElementById("holdSelectAll").checked = false;
             updateHoldSelectedCount();
@@ -3254,8 +3253,16 @@ ${recipientHtml}
         function updateHoldSelectedCount() {
           const checked = document.querySelectorAll(".hold-cb:checked");
           const countEl = document.getElementById("holdSelectedCount");
+          const actionBar = document.getElementById("holdActionBar");
           if (countEl) {
             countEl.textContent = checked.length > 0 ? `เลือกแล้ว ${checked.length} รายการ` : "";
+          }
+          if (actionBar) {
+            if (checked.length > 0) {
+              actionBar.classList.remove("hidden");
+            } else {
+              actionBar.classList.add("hidden");
+            }
           }
         }
 
