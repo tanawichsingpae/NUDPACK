@@ -241,15 +241,20 @@ hover:bg-red-100 active:scale-95 transition">
           onkeydown="if(event.key === 'Enter') loadWaitingParcels()">
 
         <!-- search button -->
-        <div class="relative">
-          <input id="dateFilter" type="date" class="absolute w-0 h-0 opacity-0 pointer-events-none">
-          <button onclick="openCalendar()"
-            class="bg-orange-500 hover:bg-orange-600 transition text-white px-4 py-2 rounded-xl text-sm shadow">
-            ค้นหา
-          </button>
-        </div>
+        <div class="relative inline-block">
+    <button
+        type="button"
+        onclick="openCalendar()"
+        class="bg-orange-500 text-white px-4 py-2 rounded-xl">
+        ค้นหา
+    </button>
 
-      </div>
+    <input
+        id="dateFilter"
+        type="date"
+        class="absolute inset-0 opacity-0 w-full h-full"
+        onchange="loadWaitingParcels()">
+</div>
 
 
     </section>
@@ -2945,13 +2950,18 @@ ${recipientHtml}
         }
 
         function openCalendar() {
-          const input = document.getElementById("dateFilter");
-          input.value = ""; // ล้างวันที่เดิม
-          input.showPicker();   // เปิดปฏิทิน
-          input.onchange = () => {
-            loadWaitingParcels();
-          };
-        }
+    const input = document.getElementById("dateFilter");
+
+    input.value = "";
+
+    input.focus();
+
+    if (input.showPicker) {
+        input.showPicker();
+    } else {
+        input.click();
+    }
+}
 
         function toggleMoreMenu() {
           document.getElementById("moreMenu").classList.toggle("hidden");

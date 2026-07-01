@@ -173,13 +173,20 @@ hover:bg-red-100 active:scale-95 transition">
         <input id="recipientSearch" placeholder="ค้นหาชื่อหน้ากล่อง" class="border px-3 py-2 rounded-xl text-sm w-32" onkeydown="if(event.key === 'Enter') loadWaitingParcels()">
 
         <!-- search button -->
-        <div class="relative">
-          <input id="dateFilter" type="date" class="absolute w-0 h-0 opacity-0 pointer-events-none">
-          <button onclick="openCalendar()"
-            class="bg-orange-500 hover:bg-orange-600 transition text-white px-4 py-2 rounded-xl text-sm shadow">
-            ค้นหา
-          </button>
-        </div>
+        <div class="relative inline-block">
+    <button
+        type="button"
+        onclick="openCalendar()"
+        class="bg-orange-500 text-white px-4 py-2 rounded-xl">
+        ค้นหา
+    </button>
+
+    <input
+        id="dateFilter"
+        type="date"
+        class="absolute inset-0 opacity-0 w-full h-full"
+        onchange="loadWaitingParcels()">
+</div>
 
       </div>
 
@@ -1770,14 +1777,18 @@ ${recipientHtml}
       }
     }
     function openCalendar() {
-      const input = document.getElementById("dateFilter");
-      input.value = ""; // ล้างวันที่เดิม
-      input.value = ""; // ล้างวันที่เก่าก่อน
+    const input = document.getElementById("dateFilter");
 
-      input.onchange = () => {
-        loadWaitingParcels();
-      };
+    input.value = "";
+
+    input.focus();
+
+    if (input.showPicker) {
+        input.showPicker();
+    } else {
+        input.click();
     }
+}
 
     document.addEventListener("DOMContentLoaded", function () {
       const input = document.getElementById("dateFilter")
