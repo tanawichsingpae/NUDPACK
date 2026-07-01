@@ -1772,7 +1772,7 @@ ${recipientHtml}
     function openCalendar() {
       const input = document.getElementById("dateFilter");
       input.value = ""; // ล้างวันที่เดิม
-      input.showPicker(); // เปิดปฏิทิน
+      input.value = ""; // ล้างวันที่เก่าก่อน
 
       input.onchange = () => {
         loadWaitingParcels();
