@@ -2925,29 +2925,26 @@ ${recipientHtml}
 
         function setDefaultToday() {
 
-          // เวลาไทย +7
-          const now = new Date()
-          const thai = new Date(
-            now.toLocaleString("en-US", { timeZone: "Asia/Bangkok" })
-          )
+    const now = new Date();
+    const thai = new Date(
+        now.toLocaleString("en-US", { timeZone: "Asia/Bangkok" })
+    );
 
-          const dd = String(thai.getDate()).padStart(2, "0")
-          const mm = String(thai.getMonth() + 1).padStart(2, "0")
-          const yyyy = thai.getFullYear()
+    const dd = String(thai.getDate()).padStart(2, "0");
+    const mm = String(thai.getMonth() + 1).padStart(2, "0");
+    const yyyy = thai.getFullYear();
 
-          // ต้องมี backtick
-          const todayISO = `${yyyy}-${mm}-${dd}`
-          const dateInput = document.getElementById("dateFilter")
-          if (dateInput) {
-            dateInput.value = todayISO
-          }
+    const todayISO = `${yyyy}-${mm}-${dd}`;
 
-          // แสดงข้อความเริ่มต้นแทนการโหลดพัสดุอัตโนมัติ
-          const box = document.getElementById("parcelList");
-          if (box) {
-            box.innerHTML = `<div class="text-sm text-gray-500 text-center py-4">กรุณากรอกเลขคิวหรือชื่อหน้ากล่อง</div>`;
-          }
-        }
+    const dateInput = document.getElementById("dateFilter");
+
+    if (dateInput) {
+        dateInput.value = todayISO;
+    }
+
+    // โหลดของวันนี้ทันที
+    loadWaitingParcels();
+}
 
         function openCalendar() {
     const input = document.getElementById("dateFilter");
