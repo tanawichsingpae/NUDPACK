@@ -2560,4 +2560,39 @@ def force_confirm_pending(request: Request, admin=Depends(require_admin)):
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         db.close()
+
+from fastapi import Body
+
+@app.post("/api/queue_reservations/unlock")
+def unlock_queue(
+    payload: dict = Body(...),
+    db: Session = Depends(get_db)
+):
+
+    section_id = payload["section_id"]
+
+    reservation = (
+        db.query(QueueReservation)
+        .filter(
+            QueueReservation.section_id == section_id,
+            QueueReservation.status == "active"
+        )
+        .order_by(QueueReservation.id.desc())
+        .first()
+    )
+
+    if not reservation:
+        raise HTTPException(
+            status_code=404,
+            detail="ไม่พบ section ที่ active"
+        )
+
+    reservation.status = "unactive"
+
+    db.commit()
+
+    return {
+        "ok": True,
+        "message": "ปลดลอคสำเร็จ"
+    }
 # EOF

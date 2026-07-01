@@ -566,7 +566,7 @@ hover:bg-red-100 active:scale-95 transition">
 
       </div>
     </div>
-
+   
 
   </main>
   <!-- ================= Stranded Page ================= -->
@@ -658,6 +658,17 @@ hover:bg-red-100 active:scale-95 transition">
   </div>
   <!-- ================= /Stranded Page ================= -->
 
+  <div id="toast"
+class="fixed bottom-6 left-1/2 -translate-x-1/2
+bg-green-600 text-white px-5 py-3 rounded-xl
+shadow-lg hidden z-[99999]
+items-center gap-2">
+
+<span>✓</span>
+
+<span id="toastText"></span>
+
+</div>
   <!-- ================= Hold List Page ================= -->
   <div id="holdListPage" class="fixed inset-0 bg-[#fafafa] hidden overflow-y-auto z-50">
 
@@ -818,6 +829,34 @@ hover:bg-red-100 active:scale-95 transition">
 
     </div>
   </div>
+   <!-- Section Action Modal -->
+<div id="sectionModal"
+  class="fixed inset-0 hidden bg-black/40 z-[9999] flex items-center justify-center">
+
+  <div class="bg-white rounded-2xl p-5 w-80 shadow-xl">
+
+    <div class="flex justify-between items-center mb-4">
+      <h3 class="font-semibold text-slate-800">
+        Section <span id="sectionModalLabel"></span>
+      </h3>
+
+      <button onclick="closeSectionModal()">
+        ✕
+      </button>
+    </div>
+
+    <button
+      onclick="unlockBasket()"
+      class="w-full bg-red-500 hover:bg-red-600
+      text-white rounded-xl py-3">
+
+      🔓 ปลดลอคตระกร้า
+
+    </button>
+
+  </div>
+
+</div>
   <!-- ================= /Dashboard Page ================= -->
 
   <div id="reportPage" class="fixed inset-0 bg-[#fafafa] hidden overflow-y-auto z-50">
@@ -2592,12 +2631,28 @@ ${recipientHtml}
                 }
                 const label = s.name;  // e.g. "1–50"
                 const sNum = i + 1;   // S1…S20
-                return `
-                  <div title="Section ${sNum}: ${s.used}/${s.total} (${pct}%)" style="background:${bg};border:1px solid ${border};" class="rounded-lg p-1.5 flex flex-col items-center justify-center gap-0.5 cursor-default select-none">
-                    <span style="color:${fg};" class="text-[9px] font-semibold leading-none opacity-70">S${sNum}</span>
-                    <span style="color:${fg};" class="text-[13px] font-bold leading-none">${pct}%</span>
-                    <span style="color:${fg};" class="text-[8px] leading-none opacity-60">${s.used}/${s.total}</span>
-                  </div>`;
+                console.log("SECTION =", s);
+return `
+<div
+    onclick="openSectionModal(${s.id}, '${label}')"
+    title="Section ${label}"
+    style="background:${bg};border:1px solid ${border};"
+    class="rounded-lg p-1.5 flex flex-col items-center justify-center gap-0.5 cursor-pointer hover:scale-105 active:scale-95 transition">
+
+    <span style="color:${fg};" class="text-[9px] font-semibold leading-none opacity-70">
+        ${label}
+    </span>
+
+    <span style="color:${fg};" class="text-[13px] font-bold leading-none">
+        ${pct}%
+    </span>
+
+    <span style="color:${fg};" class="text-[8px] leading-none opacity-60">
+        ${s.used}/${s.total}
+    </span>
+
+</div>
+`;
               }).join("");
             }
 
@@ -2967,32 +3022,28 @@ ${recipientHtml}
             menu.classList.add('hidden');
           }
         });
+function setDefaultToday() {
 
-        function setDefaultToday() {
+    const now = new Date();
+    const thai = new Date(
+        now.toLocaleString("en-US", { timeZone: "Asia/Bangkok" })
+    );
 
-          // เวลาไทย +7
-          const now = new Date()
-          const thai = new Date(
-            now.toLocaleString("en-US", { timeZone: "Asia/Bangkok" })
-          )
+    const dd = String(thai.getDate()).padStart(2, "0");
+    const mm = String(thai.getMonth() + 1).padStart(2, "0");
+    const yyyy = thai.getFullYear();
 
-          const dd = String(thai.getDate()).padStart(2, "0")
-          const mm = String(thai.getMonth() + 1).padStart(2, "0")
-          const yyyy = thai.getFullYear()
+    const todayISO = `${yyyy}-${mm}-${dd}`;
 
-          // ต้องมี backtick
-          const todayISO = `${yyyy}-${mm}-${dd}`
-          const dateInput = document.getElementById("dateFilter")
-          if (dateInput) {
-            dateInput.value = todayISO
-          }
+    const dateInput = document.getElementById("dateFilter");
 
-          // แสดงข้อความเริ่มต้นแทนการโหลดพัสดุอัตโนมัติ
-          const box = document.getElementById("parcelList");
-          if (box) {
-            box.innerHTML = `<div class="text-sm text-gray-500 text-center py-4">กรุณากรอกเลขคิวหรือชื่อหน้ากล่อง</div>`;
-          }
-        }
+    if (dateInput) {
+        dateInput.value = todayISO;
+    }
+
+    // โหลดของวันนี้ทันที
+    loadWaitingParcels();
+}
 
         function openCalendar() {
           const input = document.getElementById("dateFilter");
@@ -3079,6 +3130,87 @@ ${recipientHtml}
 
           }
         }
+        let selectedSectionId = null;
+
+function openSectionModal(sectionId, label) {
+  selectedSectionId = sectionId;
+
+  document.getElementById("sectionModalLabel").textContent = label;
+
+  document
+    .getElementById("sectionModal")
+    .classList.remove("hidden");
+}
+
+function closeSectionModal() {
+  selectedSectionId = null;
+
+  document
+    .getElementById("sectionModal")
+    .classList.add("hidden");
+}
+
+async function unlockBasket() {
+
+  console.log("selectedSectionId =", selectedSectionId);
+
+  if (!selectedSectionId) {
+    alert("ไม่พบ section");
+    return;
+  }
+
+  try {
+
+    const res = await fetch(
+      "/api/queue_reservations/unlock",
+      {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          section_id: selectedSectionId
+        })
+      }
+    );
+
+    const data = await res.json();
+
+    console.log(data);
+
+    if (!res.ok) {
+      showToast(data.detail || "เกิดข้อผิดพลาด");
+      return;
+    }
+
+    showToast(data.message || "ปลดลอคตระกร้าสำเร็จ");
+
+    closeSectionModal();
+
+    loadDashboard();
+
+  } catch (e) {
+
+    console.error(e);
+
+    alert("เรียก API ไม่สำเร็จ");
+  }
+}
+function openSectionModal(sectionId, label) {
+
+  console.log("CLICK SECTION =", sectionId);
+
+  selectedSectionId = sectionId;
+
+  document.getElementById(
+    "sectionModalLabel"
+  ).textContent = label;
+
+  document
+    .getElementById("sectionModal")
+    .classList.remove("hidden");
+}
       </script>
 
       <!-- ============================================================
@@ -3392,6 +3524,28 @@ ${recipientHtml}
             alert("เกิดข้อผิดพลาด: " + err.message);
           }
         }
+        function showToast(message) {
+
+    const toast =
+        document.getElementById("toast");
+
+    const text =
+        document.getElementById("toastText");
+
+    text.textContent = message;
+
+    toast.classList.remove("hidden");
+
+    toast.classList.add("flex");
+
+    setTimeout(() => {
+
+        toast.classList.add("hidden");
+
+        toast.classList.remove("flex");
+
+    }, 2500);
+}
       </script>
 
       <script>
@@ -3406,6 +3560,7 @@ ${recipientHtml}
         function openAuditLogPage() {
           window.location.href = "/audit";
         }
+        
       </script>
 
 </body>
