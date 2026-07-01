@@ -242,19 +242,13 @@ hover:bg-red-100 active:scale-95 transition">
 
         <!-- search button -->
         <div class="relative inline-block">
-    <button
-        type="button"
-        onclick="openCalendar()"
-        class="bg-orange-500 text-white px-4 py-2 rounded-xl">
-        ค้นหา
-    </button>
+          <button type="button" onclick="openCalendar()" class="bg-orange-500 text-white px-4 py-2 rounded-xl">
+            ค้นหา
+          </button>
 
-    <input
-        id="dateFilter"
-        type="date"
-        class="absolute inset-0 opacity-0 w-full h-full"
-        onchange="loadWaitingParcels()">
-</div>
+          <input id="dateFilter" type="date" class="absolute inset-0 opacity-0 w-full h-full"
+            onchange="loadWaitingParcels()">
+        </div>
 
 
     </section>
@@ -1997,7 +1991,7 @@ hover:bg-red-100 active:scale-95 transition">
         }
 
         /* ---------- export ---------- */
-        function exportReport(fmt = "csv") {
+        async function exportReport(fmt = "csv") {
 
           const start = unslash(document.getElementById("r_start").value);
           const end = unslash(document.getElementById("r_end").value);
@@ -2014,7 +2008,33 @@ hover:bg-red-100 active:scale-95 transition">
             fmt: fmt
           });
 
-          window.location = `/api/reports/export?${qs.toString()}`;
+          // ใช้ fetch + Blob แทน window.location เพื่อ:
+          // 1) ส่ง session cookie ไปด้วย (credentials: include)
+          // 2) URL แบบ absolute (ขึ้นต้นด้วย /) ทำงานถูกต้องเสมอ ไม่ว่า app จะอยู่ใต้ subprefix ใด
+          try {
+            const res = await fetch(`/api/reports/export?${qs.toString()}`, {
+              credentials: "include"
+            });
+            if (!res.ok) {
+              const errText = await res.text().catch(() => res.statusText);
+              alert(`Export ล้มเหลว (${res.status}): ${errText}`);
+              return;
+            }
+            const blob = await res.blob();
+            const disposition = res.headers.get("Content-Disposition") || "";
+            let filename = fmt === "xlsx" ? "report.xlsx" : "report.csv";
+            const m = disposition.match(/filename\*?=(?:UTF-8'')?([^;\r\n]+)/i);
+            if (m) filename = decodeURIComponent(m[1].replace(/"/g, ""));
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1000);
+          } catch (err) {
+            alert("Export ล้มเหลว: " + err.message);
+          }
         }
         /* ---------- Utilities ---------- */
         function setStatus(s) { try { document.getElementById('scanStatus').innerText = s; } catch (e) { } }
@@ -2700,8 +2720,33 @@ ${recipientHtml}
           adminPage.classList.remove("hidden");
         }
 
-        function exportStrandedParcels() {
-          window.location.href = `/api/reports/stranded/export?days=${currentStrandedDays}`;
+        async function exportStrandedParcels() {
+          // ใช้ fetch + Blob แทน window.location เพื่อส่ง session cookie และรองรับ subprefix
+          // (ใช้ absolute path ขึ้นต้นด้วย / เพื่อให้ resolve ถูกต้องเสมอ)
+          try {
+            const res = await fetch(`/api/reports/stranded/export?days=${currentStrandedDays}`, {
+              credentials: "include"
+            });
+            if (!res.ok) {
+              const errText = await res.text().catch(() => res.statusText);
+              alert(`Export ล้มเหลว (${res.status}): ${errText}`);
+              return;
+            }
+            const blob = await res.blob();
+            const disposition = res.headers.get("Content-Disposition") || "";
+            let filename = "stranded_parcels.xlsx";
+            const m = disposition.match(/filename\*?=(?:UTF-8'')?([^;\r\n]+)/i);
+            if (m) filename = decodeURIComponent(m[1].replace(/"/g, ""));
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1000);
+          } catch (err) {
+            alert("Export ล้มเหลว: " + err.message);
+          }
         }
 
         function onStrandedSelectChange() {
@@ -2925,40 +2970,43 @@ ${recipientHtml}
 
         function setDefaultToday() {
 
-    const now = new Date();
-    const thai = new Date(
-        now.toLocaleString("en-US", { timeZone: "Asia/Bangkok" })
-    );
+          // เวลาไทย +7
+          const now = new Date()
+          const thai = new Date(
+            now.toLocaleString("en-US", { timeZone: "Asia/Bangkok" })
+          )
 
-    const dd = String(thai.getDate()).padStart(2, "0");
-    const mm = String(thai.getMonth() + 1).padStart(2, "0");
-    const yyyy = thai.getFullYear();
+          const dd = String(thai.getDate()).padStart(2, "0")
+          const mm = String(thai.getMonth() + 1).padStart(2, "0")
+          const yyyy = thai.getFullYear()
 
-    const todayISO = `${yyyy}-${mm}-${dd}`;
+          // ต้องมี backtick
+          const todayISO = `${yyyy}-${mm}-${dd}`
+          const dateInput = document.getElementById("dateFilter")
+          if (dateInput) {
+            dateInput.value = todayISO
+          }
 
-    const dateInput = document.getElementById("dateFilter");
-
-    if (dateInput) {
-        dateInput.value = todayISO;
-    }
-
-    // โหลดของวันนี้ทันที
-    loadWaitingParcels();
-}
+          // แสดงข้อความเริ่มต้นแทนการโหลดพัสดุอัตโนมัติ
+          const box = document.getElementById("parcelList");
+          if (box) {
+            box.innerHTML = `<div class="text-sm text-gray-500 text-center py-4">กรุณากรอกเลขคิวหรือชื่อหน้ากล่อง</div>`;
+          }
+        }
 
         function openCalendar() {
-    const input = document.getElementById("dateFilter");
+          const input = document.getElementById("dateFilter");
 
-    input.value = "";
+          input.value = "";
 
-    input.focus();
+          input.focus();
 
-    if (input.showPicker) {
-        input.showPicker();
-    } else {
-        input.click();
-    }
-}
+          if (input.showPicker) {
+            input.showPicker();
+          } else {
+            input.click();
+          }
+        }
 
         function toggleMoreMenu() {
           document.getElementById("moreMenu").classList.toggle("hidden");
